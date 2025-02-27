@@ -1,21 +1,30 @@
 <template>
-  <div class="job-detail">
+  <div class="job-detail" v-if="jobInfo">
     <!-- 职位基本信息 -->
     <div class="job-header">
       <div class="job-basic">
         <h1 class="job-title">{{ jobInfo.title }}</h1>
-        <div class="job-salary">{{ jobInfo.salary }}K</div>
+        <div class="job-salary">{{ jobInfo.salary }}</div>
       </div>
       <div class="job-tags">
-        <span class="tag">{{ jobInfo.city }}</span>
-        <span class="tag">{{ jobInfo.experience }}</span>
-        <span class="tag">{{ jobInfo.education }}</span>
+        <span class="tag">{{ jobInfo.location }}</span>
+        <span class="tag">{{ jobInfo.educationRequirement }}</span>
+        <span class="tag">{{ jobInfo.positionType }}</span>
+        <span class="tag">{{ jobInfo.majorRequirement }}</span>
       </div>
       <div class="company-info">
         <img :src="jobInfo.companyLogo" :alt="jobInfo.companyName" class="company-logo">
         <div class="company-basic">
-          <h3 class="company-name">{{ jobInfo.companyName }}</h3>
-          <p class="company-desc">{{ jobInfo.companyIndustry }} · {{ jobInfo.companySize }}</p>
+          <div class="company-title">
+            <h3 class="company-name">{{ jobInfo.companyName }}</h3>
+            <span v-if="jobInfo.companyVerified" class="verified-badge">
+              <van-icon name="success" />认证企业
+            </span>
+          </div>
+          <div class="company-tags">
+            <span class="company-tag">{{ jobInfo.industry }}</span>
+            <span class="company-tag">{{ jobInfo.companyScale }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -34,19 +43,19 @@
     <div class="detail-content">
       <div class="section">
         <h2 class="section-title">职位描述</h2>
-        <div class="job-description" v-html="jobInfo.description"></div>
+        <div class="job-description">{{ jobInfo.description }}</div>
       </div>
 
       <div class="section">
         <h2 class="section-title">职位要求</h2>
-        <div class="job-requirements" v-html="jobInfo.requirements"></div>
+        <div class="job-requirements" v-html="formatRequirements"></div>
       </div>
 
       <div class="section">
         <h2 class="section-title">工作地址</h2>
         <div class="job-address">
           <van-icon name="location-o" />
-          <span>{{ jobInfo.address }}</span>
+          <span>{{ jobInfo.location }}</span>
         </div>
       </div>
     </div>
@@ -57,61 +66,42 @@
       <job-list :jobs="similarJobs" />
     </div>
   </div>
+  <div v-else class="loading-wrapper">
+    <van-loading type="spinner" />
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { showToast } from 'vant'
+import { getJobDetail } from '../../api/jobs'
 import JobList from '@/components/JobList.vue'
 
 const route = useRoute()
 const router = useRouter()
-
-const jobInfo = ref({
-  title: '前端开发工程师',
-  salary: '15-25',
-  city: '北京',
-  experience: '应届生',
-  education: '本科及以上',
-  companyName: 'XX科技有限公司',
-  companyLogo: 'https://placeholder.com/100',
-  companyIndustry: '互联网',
-  companySize: '500-1000人',
-  description: `
-    <p>工作职责：</p>
-    <ul>
-      <li>负责公司产品的前端开发工作</li>
-      <li>与后端工程师配合，完成产品功能开发</li>
-      <li>优化前端性能，提升用户体验</li>
-    </ul>
-  `,
-  requirements: `
-    <p>任职要求：</p>
-    <ul>
-      <li>本科及以上学历，计算机相关专业</li>
-      <li>熟悉 HTML、CSS、JavaScript</li>
-      <li>熟悉 Vue.js 等主流前端框架</li>
-      <li>有良好的团队协作能力</li>
-    </ul>
-  `,
-  address: '北京市海淀区XX大厦'
-})
-
+const jobInfo = ref(null)
 const similarJobs = ref([])
 const isCollected = ref(false)
 
-// 获取职位详情
+const formatRequirements = computed(() => {
+  if (!jobInfo.value?.requirements) return ''
+  return jobInfo.value.requirements.split('\n').join('<br>')
+})
+
 const fetchJobDetail = async () => {
   try {
-    const jobId = route.params.id
-    // TODO: 调用获取职位详情 API
-    console.log('获取职位详情:', jobId)
+    const id = route.params.id
+    console.log('Fetching job detail for id:', id) // 调试日志
+    const result = await getJobDetail(id)
+    console.log('Job detail result:', result) // 调试日志
+    jobInfo.value = result.data
   } catch (error) {
     console.error('获取职位详情失败:', error)
+    showToast('获取职位详情失败')
   }
 }
 
-// 获取相似职位
 const fetchSimilarJobs = async () => {
   try {
     // TODO: 调用获取相似职位 API
@@ -121,27 +111,25 @@ const fetchSimilarJobs = async () => {
   }
 }
 
-// 投递简历
 const handleApply = async () => {
   try {
-    // TODO: 调用投递简历 API
-    console.log('投递职位:', route.params.id)
+    showToast('投递成功')
   } catch (error) {
-    console.error('投递简历失败:', error)
+    showToast('投递失败')
   }
 }
 
-// 收藏/取消收藏
 const toggleCollect = async () => {
   try {
-    // TODO: 调用收藏/取消收藏 API
     isCollected.value = !isCollected.value
+    showToast(isCollected.value ? '收藏成功' : '已取消收藏')
   } catch (error) {
-    console.error('操作失败:', error)
+    showToast('操作失败')
   }
 }
 
 onMounted(() => {
+  console.log('Component mounted') // 调试日志
   fetchJobDetail()
   fetchSimilarJobs()
 })
@@ -149,9 +137,9 @@ onMounted(() => {
 
 <style scoped>
 .job-detail {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 20px;
+  max-width: 1200px;
+  margin: 24px auto;
+  padding: 0 20px;
 }
 
 .job-header {
@@ -159,32 +147,32 @@ onMounted(() => {
   border-radius: 8px;
   padding: 24px;
   margin-bottom: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
 }
 
 .job-basic {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
 }
 
 .job-title {
-  margin: 0;
   font-size: 24px;
   color: #333;
+  margin: 0;
 }
 
 .job-salary {
-  font-size: 24px;
   color: #ff4d4f;
+  font-size: 20px;
   font-weight: 500;
 }
 
 .job-tags {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
 .tag {
@@ -197,7 +185,6 @@ onMounted(() => {
 
 .company-info {
   display: flex;
-  align-items: center;
   gap: 16px;
   padding-top: 20px;
   border-top: 1px solid #f0f0f0;
@@ -210,35 +197,51 @@ onMounted(() => {
   object-fit: cover;
 }
 
+.company-basic {
+  flex: 1;
+}
+
+.company-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .company-name {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 18px;
   color: #333;
 }
 
-.company-desc {
-  margin: 0;
+.verified-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #52c41a;
+  font-size: 14px;
+}
+
+.company-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.company-tag {
   font-size: 14px;
   color: #666;
 }
 
 .job-actions {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: white;
-  padding: 16px;
-  margin: 0 -20px 16px;
   display: flex;
   gap: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
 }
 
 .detail-content {
   background: white;
   border-radius: 8px;
   padding: 24px;
-  margin-bottom: 24px;
 }
 
 .section {
@@ -250,9 +253,9 @@ onMounted(() => {
 }
 
 .section-title {
-  margin: 0 0 16px;
   font-size: 18px;
   color: #333;
+  margin: 0 0 16px;
 }
 
 .job-description,
@@ -262,24 +265,25 @@ onMounted(() => {
   color: #666;
 }
 
-.job-description ul,
-.job-requirements ul {
-  padding-left: 20px;
-  margin: 12px 0;
-}
-
 .job-address {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
   color: #666;
+  font-size: 14px;
 }
 
 .similar-jobs {
   background: white;
   border-radius: 8px;
   padding: 24px;
+}
+
+.loading-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
 }
 
 @media (max-width: 768px) {
@@ -290,12 +294,7 @@ onMounted(() => {
   .job-basic {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
-  }
-
-  .company-info {
-    flex-direction: column;
-    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style> 

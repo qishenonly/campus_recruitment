@@ -77,7 +77,7 @@
       <div class="job-content">
         <div class="job-header">
           <div class="job-header-left">
-            <h2>最新职位</h2>
+            <h2>搜索结果</h2>
             <span class="job-count">共 {{ totalJobs }} 个职位</span>
           </div>
           <div class="job-sort">
@@ -91,7 +91,8 @@
             </span>
           </div>
         </div>
-        <job-list :jobs="jobs" />
+        <van-loading v-if="loading" />
+        <job-list v-else :jobs="jobs" />
       </div>
     </div>
   </div>
@@ -99,13 +100,15 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { showToast } from 'vant'
 import JobList from '@/components/JobList.vue'
-import { getJobs } from '@/api/jobs'
+import { getJobs, searchJobs } from '@/api/jobs'
 
 const searchValue = ref('')
 const jobs = ref([])
 const totalJobs = ref(0)
 const currentSort = ref('latest')
+const loading = ref(false)
 
 const hotTags = ['Java开发', '前端工程师', '产品经理', '运营', 'UI设计师']
 
@@ -115,8 +118,24 @@ const sortOptions = [
   { label: '薪资最高', value: 'salary' }
 ]
 
-const handleSearch = () => {
-  // 实现搜索逻辑
+const handleSearch = async () => {
+  if (!searchValue.value.trim()) {
+    showToast('请输入搜索关键词')
+    return
+  }
+  loading.value = true
+  try {
+    const result = await searchJobs({ keyword: searchValue.value })
+    jobs.value = result.data.content
+    totalJobs.value = result.data.totalElements
+  } catch (error) {
+    console.error('搜索职位失败:', error)
+    showToast('搜索职位失败，请稍后重试')
+    jobs.value = []
+    totalJobs.value = 0
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleTagClick = (tag) => {
@@ -129,14 +148,25 @@ const handleSort = (value) => {
   // 实现排序逻辑
 }
 
-onMounted(async () => {
+const fetchJobs = async () => {
+  loading.value = true
   try {
     const result = await getJobs()
-    jobs.value = result.data
-    totalJobs.value = result.data.length
+    console.log(result)
+    jobs.value = result.data.content
+    totalJobs.value = result.data.totalElements
   } catch (error) {
     console.error('获取职位列表失败:', error)
+    showToast('获取职位列表失败，请稍后重试')
+    jobs.value = []
+    totalJobs.value = 0
+  } finally {
+    loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchJobs()
 })
 </script>
 
