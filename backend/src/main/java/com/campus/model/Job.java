@@ -1,9 +1,7 @@
 package com.campus.model;
 
 import lombok.Data;
-
 import javax.persistence.*;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -13,15 +11,52 @@ public class Job {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String title;           // 职位标题
-    private String company;         // 公司名称
-    private String location;        // 工作地点
-    private String description;     // 职位描述
-    private String requirements;    // 职位要求
-    private BigDecimal salary;      // 薪资
-    private String education;       // 学历要求
-    private LocalDateTime deadline; // 投递截止日期
-    private LocalDateTime createTime; // 创建时间
-    private LocalDateTime updateTime; // 更新时间
+    
+    @Column(nullable = false)
+    private Long companyId;
+    
+    @Column(nullable = false)
+    private String title;
+    
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String description;
+    
+    @Column(columnDefinition = "TEXT")
+    private String requirements;
+    
+    @Column(nullable = false)
+    private String salary;
+    
+    @Column(nullable = false)
+    private String location;
+    
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private PositionType positionType;
+    
+    private String educationRequirement;
+    
+    private String majorRequirement;
+    
+    @Column(nullable = false)
+    private LocalDateTime publishDate;
+    
+    @Column(nullable = false)
+    private LocalDateTime deadline;
+    
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private JobStatus status = JobStatus.PUBLISHED;
+    
+    private Integer viewCount = 0;
+    
+    private Integer applyCount = 0;
+    
+    public enum PositionType {
+        全职, 实习, 兼职
+    }
+    
+    public enum JobStatus {
+        DRAFT, PUBLISHED, CLOSED, DELETED
+    }
 } 
