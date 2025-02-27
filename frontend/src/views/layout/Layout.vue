@@ -5,10 +5,18 @@
       <div class="header-content">
         <div class="logo">青云直聘</div>
         <nav class="nav-menu">
-          <router-link to="/home" class="nav-item">首页</router-link>
-          <router-link to="/company" class="nav-item">公司</router-link>
-          <router-link to="/message" class="nav-item">消息</router-link>
-          <router-link to="/mine" class="nav-item">我的</router-link>
+          <router-link to="/home" class="nav-item" active-class="active">
+            <span>首页</span>
+          </router-link>
+          <router-link to="/company" class="nav-item" active-class="active">
+            <span>公司</span>
+          </router-link>
+          <router-link to="/message" class="nav-item" active-class="active">
+            <span>消息</span>
+          </router-link>
+          <router-link to="/mine" class="nav-item" active-class="active">
+            <span>我的</span>
+          </router-link>
         </nav>
         <div class="auth-buttons">
           <router-link to="/login" class="login-btn">登录 / 注册</router-link>
@@ -18,7 +26,11 @@
 
     <!-- 主要内容区 -->
     <main class="main-content">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
 
     <!-- 页脚 -->
@@ -68,29 +80,60 @@ const showUserMenu = () => {
   padding: 0 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
 }
 
 .logo {
   font-size: 24px;
   font-weight: bold;
   color: var(--primary-color);
+  margin-right: 80px;  /* 增加与导航菜单的距离 */
 }
 
 .nav-menu {
   display: flex;
-  gap: 30px;
+  gap: 40px;  /* 增加导航项之间的间距 */
 }
 
 .nav-item {
-  color: #333;
+  position: relative;
+  color: #666;
   text-decoration: none;
   font-size: 16px;
-  transition: color 0.3s;
+  padding: 8px 0;
+}
+
+.nav-item span {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: var(--primary-color);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
 }
 
 .nav-item:hover {
   color: var(--primary-color);
+}
+
+.nav-item:hover::after {
+  width: 100%;
+}
+
+.nav-item.active {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.nav-item.active::after {
+  width: 100%;
 }
 
 .auth-buttons {
@@ -145,5 +188,21 @@ const showUserMenu = () => {
   .auth-buttons {
     display: none; /* 在移动端可以考虑其他展示方式 */
   }
+}
+
+/* 添加路由切换动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 </style>
