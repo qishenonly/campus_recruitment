@@ -2,6 +2,7 @@ package com.campus.controller;
 
 import com.campus.model.Job;
 import com.campus.service.JobService;
+import com.campus.dto.JobDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,28 +18,29 @@ public class JobController {
 
     // 获取职位列表（分页）
     @GetMapping
-    public ResponseEntity<Page<Job>> getAllJobs(Pageable pageable) {
-        return ResponseEntity.ok(jobService.findAll(pageable));
+    public ResponseEntity<Page<JobDTO>> getAllJobs(Pageable pageable) {
+        return ResponseEntity.ok(jobService.findAllWithCompany(pageable));
     }
 
     // 获取单个职位详情
     @GetMapping("/{id}")
-    public ResponseEntity<Job> getJob(@PathVariable Long id) {
-        return jobService.findById(id)
+    public ResponseEntity<JobDTO> getJob(@PathVariable Long id) {
+        return jobService.findByIdWithCompany(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     // 搜索职位
     @GetMapping("/search")
-    public ResponseEntity<Page<Job>> searchJobs(
+    public ResponseEntity<Page<JobDTO>> searchJobs(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String location,
             @RequestParam(required = false) String education,
             @RequestParam(required = false) Job.PositionType positionType,
             @RequestParam(required = false) String salary,
             Pageable pageable) {
-        return ResponseEntity.ok(jobService.search(keyword, location, education, positionType, salary, pageable));
+        return ResponseEntity.ok(jobService.searchWithCompany(
+            keyword, location, education, positionType, salary, pageable));
     }
 
     // 发布新职位
@@ -72,9 +74,9 @@ public class JobController {
 
     // 获取企业发布的职位列表
     @GetMapping("/company/{companyId}")
-    public ResponseEntity<Page<Job>> getCompanyJobs(
+    public ResponseEntity<Page<JobDTO>> getCompanyJobs(
             @PathVariable Long companyId,
             Pageable pageable) {
-        return ResponseEntity.ok(jobService.findByCompanyId(companyId, pageable));
+        return ResponseEntity.ok(jobService.findByCompanyIdWithCompany(companyId, pageable));
     }
 } 
