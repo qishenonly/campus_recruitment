@@ -1,166 +1,388 @@
 <template>
   <div class="auth-page">
-    <div class="auth-container">
-      <h2 class="title">登录青云直聘</h2>
-      <p class="subtitle">找工作从这里开始</p>
+    <!-- 添加返回按钮 -->
+    <div class="back-home">
+      <van-icon name="arrow-left" @click="goHome" />
+      <span @click="goHome">返回首页</span>
+    </div>
 
-      <van-form @submit="onSubmit">
-        <van-cell-group inset>
-          <van-field
-            v-model="formData.phone"
-            name="phone"
-            label="手机号"
-            placeholder="请输入手机号"
-            :rules="[{ required: true, message: '请输入手机号' }]"
-          />
-          <van-field
-            v-model="formData.password"
-            type="password"
-            name="password"
-            label="密码"
-            placeholder="请输入密码"
-            :rules="[{ required: true, message: '请输入密码' }]"
-          />
-        </van-cell-group>
+    <div class="auth-background">
+      <div class="auth-container">
+        <div class="auth-form">
+          <div class="auth-header">
+            <img src="@/assets/logo.png" alt="logo" class="auth-logo" />
+            <h2>欢迎回来</h2>
+            <p>登录青云直聘，发现更多机会</p>
+          </div>
 
-        <div class="form-actions">
-          <van-button round block type="primary" native-type="submit">
-            登录
-          </van-button>
-        </div>
+          <van-form @submit="onSubmit" class="login-form">
+            <van-field
+              v-model="formData.email"
+              name="email"
+              placeholder="请输入邮箱"
+              :rules="[
+                { required: true, message: '请输入邮箱' },
+                { pattern: emailPattern, message: '请输入正确的邮箱格式' }
+              ]"
+            >
+              <template #prefix>
+                <i class="iconfont icon-email"></i>
+              </template>
+            </van-field>
 
-        <div class="auth-links">
-          <router-link to="/register">注册新账号</router-link>
-          <router-link to="/forgot-password">忘记密码？</router-link>
-        </div>
+            <van-field
+              v-model="formData.password"
+              :type="showPassword ? 'text' : 'password'"
+              name="password"
+              placeholder="请输入密码"
+              :rules="[{ required: true, message: '请输入密码' }]"
+            >
+              <template #prefix>
+                <i class="iconfont icon-password"></i>
+              </template>
+              <template #right-icon>
+                <van-icon 
+                  :name="showPassword ? 'eye-o' : 'closed-eye'" 
+                  @click="showPassword = !showPassword"
+                />
+              </template>
+            </van-field>
 
-        <div class="other-login">
-          <div class="divider">
+            <div class="remember-checkbox">
+              <van-checkbox v-model="formData.remember" shape="square" icon-size="14px">
+                <span class="remember-text">记住我</span>
+              </van-checkbox>
+            </div>
+
+            <div class="form-options">
+              <router-link to="/forgot-password" class="forgot-link">忘记密码？</router-link>
+            </div>
+
+            <div class="form-actions">
+              <van-button round block type="primary" native-type="submit">
+                登录
+              </van-button>
+            </div>
+          </van-form>
+
+          <div class="auth-divider">
             <span>其他登录方式</span>
           </div>
-          <div class="login-methods">
-            <div class="login-method" @click="handleOtherLogin('wechat')">
-              <van-icon name="wechat" color="#07c160" size="24" />
-              <span>微信登录</span>
-            </div>
+
+          <div class="social-login">
+            <button class="social-btn wechat" @click="handleSocialLogin('wechat')">
+              <i class="iconfont icon-wechat"></i>
+            </button>
+            <button class="social-btn github" @click="handleSocialLogin('github')">
+              <i class="iconfont icon-github"></i>
+            </button>
+          </div>
+
+          <div class="auth-footer">
+            还没有账号？
+            <router-link to="/register" class="register-link">立即注册</router-link>
           </div>
         </div>
-      </van-form>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { login } from '@/api/auth'
 
 const router = useRouter()
-const formData = ref({
-  phone: '',
-  password: ''
+const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
+const loading = ref(false)
+
+const formData = reactive({
+  email: '',
+  password: '',
+  remember: false
 })
 
-const onSubmit = async (values) => {
+const showPassword = ref(false)
+
+const onSubmit = async () => {
   try {
-    // TODO: 调用登录 API
-    console.log('登录表单:', values)
-    showToast('登录成功')
-    router.push('/')
+    loading.value = true
+    const res = await login(formData)
+    
+    // 保存token和用户信息
+    localStorage.setItem('token', res.data.token)
+    localStorage.setItem('userInfo', JSON.stringify(res.data))
+    
+    showToast({
+      message: '登录成功',
+      type: 'success'
+    })
+    
+    // 根据角色跳转
+    const role = res.data.role
+    if (role === 'STUDENT') {
+      router.push('/home')
+    } else if (role === 'COMPANY') {
+      router.push('/company/home')
+    } else if (role === 'ADMIN') {
+      router.push('/admin')
+    }
   } catch (error) {
-    showToast('登录失败')
+    console.error('登录失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 
-const handleOtherLogin = (type) => {
+const handleSocialLogin = (type) => {
   showToast('暂未开放')
+}
+
+// 添加返回首页方法
+const goHome = () => {
+  router.push('/')
 }
 </script>
 
 <style scoped>
 .auth-page {
   min-height: 100vh;
+  background: linear-gradient(135deg, #1890ff 0%, #1890ff 100%);
+}
+
+.auth-background {
+  min-height: 100vh;
+  background-image: url('@/assets/auth-bg.png');
+  background-size: cover;
+  background-position: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
   padding: 20px;
 }
 
 .auth-container {
   width: 100%;
-  max-width: 400px;
-  background: white;
-  padding: 40px 30px;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+  max-width: 440px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
-.title {
+.auth-form {
+  padding: 40px;
+}
+
+.auth-header {
   text-align: center;
+  margin-bottom: 40px;
+}
+
+.auth-logo {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+}
+
+.auth-header h2 {
   font-size: 24px;
   color: #333;
   margin: 0 0 8px;
 }
 
-.subtitle {
-  text-align: center;
+.auth-header p {
   color: #666;
-  margin: 0 0 32px;
+  font-size: 14px;
+  margin: 0;
+}
+
+.login-form {
+  margin-bottom: 24px;
+}
+
+.login-form :deep(.van-field) {
+  background: #f5f7fa;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+}
+
+.login-form :deep(.van-field__control) {
+  height: 24px;
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.forgot-link {
+  color: var(--primary-color);
+  font-size: 14px;
+  text-decoration: none;
 }
 
 .form-actions {
+  margin-bottom: 24px;
+}
+
+.auth-divider {
+  position: relative;
+  text-align: center;
   margin: 24px 0;
 }
 
-.auth-links {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 32px;
-}
-
-.auth-links a {
-  color: var(--primary-color);
-  text-decoration: none;
-  font-size: 14px;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  margin: 24px 0;
-}
-
-.divider::before,
-.divider::after {
+.auth-divider::before,
+.auth-divider::after {
   content: '';
-  flex: 1;
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 80px);
   height: 1px;
-  background: #eee;
+  background: #e8e8e8;
 }
 
-.divider span {
+.auth-divider::before {
+  left: 0;
+}
+
+.auth-divider::after {
+  right: 0;
+}
+
+.auth-divider span {
+  background: white;
   padding: 0 16px;
   color: #999;
   font-size: 14px;
 }
 
-.login-methods {
+.social-login {
   display: flex;
   justify-content: center;
-  gap: 32px;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
-.login-method {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+.social-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
 }
 
-.login-method span {
+.social-btn.wechat {
+  background: #07c160;
+  color: white;
+}
+
+.social-btn.github {
+  background: #24292e;
+  color: white;
+}
+
+.social-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.auth-footer {
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.register-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* 图标样式 */
+.iconfont {
+  font-size: 20px;
+}
+
+.remember-checkbox {
+  margin: 16px 0;
+}
+
+.remember-text {
   font-size: 12px;
   color: #666;
+}
+
+:deep(.van-checkbox__label) {
+  font-size: 12px;
+  line-height: 14px;
+}
+
+/* 调整复选框大小 */
+:deep(.van-checkbox__icon) {
+  font-size: 14px;
+  height: 14px;
+  line-height: 14px;
+}
+
+@media (max-width: 768px) {
+  .auth-container {
+    margin: 20px;
+  }
+
+  .auth-form {
+    padding: 30px 20px;
+  }
+}
+
+.back-home {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  transition: all 0.3s;
+}
+
+.back-home:hover {
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.back-home .van-icon {
+  font-size: 16px;
+  color: #666;
+}
+
+.back-home span {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .back-home {
+    top: 12px;
+    left: 12px;
+    padding: 6px 12px;
+  }
 }
 </style> 

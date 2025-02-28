@@ -5,21 +5,29 @@
       <div class="header-content">
         <div class="logo">青云直聘</div>
         <nav class="nav-menu">
-          <router-link to="/home" class="nav-item" active-class="active">
-            <span>首页</span>
-          </router-link>
-          <router-link to="/company" class="nav-item" active-class="active">
-            <span>公司</span>
-          </router-link>
-          <router-link to="/message" class="nav-item" active-class="active">
-            <span>消息</span>
-          </router-link>
-          <router-link to="/mine" class="nav-item" active-class="active">
-            <span>我的</span>
-          </router-link>
+          <router-link to="/" class="nav-item" active-class="active">首页</router-link>
+          <router-link to="/company" class="nav-item" active-class="active">公司</router-link>
+          <!-- 只在登录后显示消息和我的 -->
+          <template v-if="userInfo">
+            <router-link to="/message" class="nav-item" active-class="active">消息</router-link>
+            <router-link to="/mine" class="nav-item" active-class="active">我的</router-link>
+          </template>
         </nav>
-        <div class="auth-buttons">
-          <router-link to="/login" class="login-btn">登录 / 注册</router-link>
+        
+        <!-- 登录状态判断 -->
+        <div class="auth-section">
+          <template v-if="!userInfo">
+            <router-link to="/login" class="login-btn">登录 / 注册</router-link>
+          </template>
+          <template v-else>
+            <div class="user-actions">
+              <router-link to="/mine" class="user-info">
+                <span class="user-name">{{ userInfo.username }}</span>
+              </router-link>
+              <span class="divider">|</span>
+              <span class="logout-btn" @click="handleLogout">退出</span>
+            </div>
+          </template>
         </div>
       </div>
     </header>
@@ -44,14 +52,27 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { showDialog } from 'vant'
 
-// 临时使用的登录状态，后续需要替换为真实的用户状态管理
-const isLoggedIn = ref(false)
-const username = ref('')
-const userAvatar = ref('')
+const router = useRouter()
+// 从 localStorage 获取用户信息
+const userInfo = ref(JSON.parse(localStorage.getItem('userInfo')))
 
-const showUserMenu = () => {
-  // TODO: 显示用户菜单
+// 退出登录
+const handleLogout = () => {
+  showDialog({
+    title: '提示',
+    message: '确认退出登录吗？',
+    showCancelButton: true
+  }).then(() => {
+    localStorage.removeItem('userInfo')
+    localStorage.removeItem('token')
+    userInfo.value = null
+    router.push('/')
+  }).catch(() => {
+    // 取消退出
+  })
 }
 </script>
 
@@ -68,8 +89,8 @@ const showUserMenu = () => {
   left: 0;
   right: 0;
   height: 60px;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   z-index: 100;
 }
 
@@ -80,69 +101,65 @@ const showUserMenu = () => {
   padding: 0 20px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .logo {
   font-size: 24px;
   font-weight: bold;
   color: var(--primary-color);
-  margin-right: 80px;  /* 增加与导航菜单的距离 */
 }
 
 .nav-menu {
+  flex: 1;
   display: flex;
-  gap: 40px;  /* 增加导航项之间的间距 */
+  gap: 32px;
+  margin-left: 48px;
 }
 
 .nav-item {
-  position: relative;
-  color: #666;
-  text-decoration: none;
   font-size: 16px;
-  padding: 8px 0;
-}
-
-.nav-item span {
+  color: #333;
+  text-decoration: none;
   position: relative;
-  z-index: 1;
-}
-
-.nav-item::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 2px;
-  background: var(--primary-color);
-  transition: all 0.3s ease;
-  transform: translateX(-50%);
-}
-
-.nav-item:hover {
-  color: var(--primary-color);
-}
-
-.nav-item:hover::after {
-  width: 100%;
 }
 
 .nav-item.active {
   color: var(--primary-color);
-  font-weight: 500;
 }
 
-.nav-item.active::after {
-  width: 100%;
-}
-
-.auth-buttons {
+.auth-section {
   margin-left: auto;
 }
 
-.login-btn {
+.user-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-btn, .user-info, .logout-btn {
   color: var(--primary-color);
   text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.user-info {
+  text-decoration: none;
+}
+
+.user-name {
+  color: #333;
+}
+
+.divider {
+  color: #ddd;
+  font-size: 14px;
+}
+
+.logout-btn:hover {
+  opacity: 0.8;
 }
 
 .main-content {
@@ -184,9 +201,23 @@ const showUserMenu = () => {
   color: var(--primary-color);
 }
 
+/* 移动端适配 */
 @media (max-width: 768px) {
-  .auth-buttons {
-    display: none; /* 在移动端可以考虑其他展示方式 */
+  .header-content {
+    padding: 0 12px;
+  }
+
+  .nav-menu {
+    gap: 16px;
+    margin-left: 24px;
+  }
+
+  .nav-item {
+    font-size: 14px;
+  }
+
+  .user-actions {
+    gap: 4px;
   }
 }
 
