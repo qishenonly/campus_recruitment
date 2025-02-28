@@ -1,5 +1,7 @@
 package com.campus.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -14,6 +16,8 @@ import javax.mail.internet.MimeMessage;
 @Service
 public class EmailService {
 
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
+
     @Autowired
     private JavaMailSender mailSender;
 
@@ -24,6 +28,9 @@ public class EmailService {
     private String fromEmail;
 
     public void sendVerificationEmail(String to, String code) throws MessagingException {
+        // 打印验证码到控制台
+        logger.info("发送验证码到 {}: {}", to, code);
+
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
