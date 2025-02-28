@@ -35,6 +35,11 @@
             {{ tag }}
           </a>
         </div>
+        <div class="filter-section">
+          <input v-model="location" placeholder="工作地点" class="filter-input" />
+          <input v-model="experience" placeholder="经验要求" class="filter-input" />
+          <input v-model="education" placeholder="学历要求" class="filter-input" />
+        </div>
       </div>
     </div>
 
@@ -45,30 +50,40 @@
         <div class="filter-group">
           <h3>工作地点</h3>
           <div class="filter-options">
-            <span class="filter-option active">全部</span>
-            <span class="filter-option">北京</span>
-            <span class="filter-option">上海</span>
-            <span class="filter-option">广州</span>
-            <span class="filter-option">深圳</span>
+            <span 
+              v-for="option in locationOptions" 
+              :key="option" 
+              :class="['filter-option', { active: location === option }]"
+              @click="setLocation(option)"
+            >
+              {{ option }}
+            </span>
           </div>
         </div>
         <div class="filter-group">
           <h3>工作经验</h3>
           <div class="filter-options">
-            <span class="filter-option active">不限</span>
-            <span class="filter-option">应届生</span>
-            <span class="filter-option">1-3年</span>
-            <span class="filter-option">3-5年</span>
+            <span 
+              v-for="option in experienceOptions" 
+              :key="option" 
+              :class="['filter-option', { active: experience === option }]"
+              @click="setExperience(option)"
+            >
+              {{ option }}
+            </span>
           </div>
         </div>
         <div class="filter-group">
           <h3>学历要求</h3>
           <div class="filter-options">
-            <span class="filter-option active">不限</span>
-            <span class="filter-option">大专</span>
-            <span class="filter-option">本科</span>
-            <span class="filter-option">硕士</span>
-            <span class="filter-option">博士</span>
+            <span 
+              v-for="option in educationOptions" 
+              :key="option" 
+              :class="['filter-option', { active: education === option }]"
+              @click="setEducation(option)"
+            >
+              {{ option }}
+            </span>
           </div>
         </div>
       </div>
@@ -105,12 +120,19 @@ import JobList from '@/components/JobList.vue'
 import { getJobs, searchJobs } from '@/api/jobs'
 
 const searchValue = ref('')
+const location = ref('全部')
+const experience = ref('不限')
+const education = ref('不限')
 const jobs = ref([])
 const totalJobs = ref(0)
 const currentSort = ref('latest')
 const loading = ref(false)
 
-const hotTags = ['Java开发', '前端工程师', '产品经理', '运营', 'UI设计师']
+const hotTags = ['Java', 'Python', '前端开发', '产品经理', '运营', 'UI设计师']
+
+const locationOptions = ['全部', '北京', '上海', '杭州', '深圳', '成都']
+const experienceOptions = ['不限', '应届生', '1-3年', '3-5年']
+const educationOptions = ['不限', '大专', '本科', '硕士', '博士']
 
 const sortOptions = [
   { label: '最新', value: 'latest' },
@@ -118,14 +140,35 @@ const sortOptions = [
   { label: '薪资最高', value: 'salary' }
 ]
 
+const setLocation = (option) => {
+  location.value = option
+  handleSearch()
+}
+
+const setExperience = (option) => {
+  experience.value = option
+  handleSearch()
+}
+
+const setEducation = (option) => {
+  education.value = option
+  handleSearch()
+}
+
 const handleSearch = async () => {
-  if (!searchValue.value.trim()) {
-    showToast('请输入搜索关键词')
-    return
-  }
   loading.value = true
   try {
-    const result = await searchJobs({ keyword: searchValue.value })
+    const params = {
+      keyword: searchValue.value,
+      location: location.value === '全部' ? '' : location.value
+    }
+    if (experience.value !== '不限') {
+      params.experience = experience.value
+    }
+    if (education.value !== '不限') {
+      params.education = education.value
+    }
+    const result = await searchJobs(params)
     jobs.value = result.data.content
     totalJobs.value = result.data.totalElements
   } catch (error) {
@@ -331,16 +374,19 @@ onMounted(() => {
 
 .filter-group {
   margin-bottom: 20px;
+  text-align: center;
 }
 
 .filter-group h3 {
   margin: 0 0 10px 0;
   font-size: 16px;
   color: #333;
+  font-weight: 600;
 }
 
 .filter-options {
   display: flex;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
 }
@@ -430,6 +476,61 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+.filter-section {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.filter-input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  width: 150px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.filter-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.2);
+}
+
+.filter-input::placeholder {
+  color: #aaa;
+}
+
+.filter-group h3 {
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.filter-option {
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: #e0e0e0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+}
+
+.filter-option:hover {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.filter-option.active {
+  background: #1890ff;
+  color: white;
+  border-color: #1890ff;
 }
 
 /* 响应式优化 */

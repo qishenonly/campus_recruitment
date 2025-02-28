@@ -19,16 +19,25 @@ export function getJobDetail(id) {
 
 // 搜索职位
 export function searchJobs(params) {
-    return request({
-      url: '/jobs/search',
-      method: 'get',
-      params
-    })
-  }
+  return request({
+    url: '/jobs/search',
+    method: 'get',
+    params
+  })
+}
+
+// 获取企业职位列表
+export function getCompanyJobs(companyId) {
+  return request({
+    url: `/jobs/company/${companyId}`,
+    method: 'get'
+  })
+}
 
 // 确保导出所有需要的函数
 export default {
   getJobs,
   getJobDetail,
-  searchJobs
+  searchJobs,
+  getCompanyJobs
 }

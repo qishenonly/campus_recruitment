@@ -58,13 +58,16 @@
           <img :src="company.logo" :alt="company.name">
         </div>
         <div class="company-info">
-          <h3 class="company-name">{{ company.name }}</h3>
+          <h3 class="company-name">{{ company.companyName }}</h3>
           <div class="company-tags">
             <span class="tag">{{ company.industry }}</span>
             <span class="tag">{{ company.scale }}</span>
-            <span class="tag">{{ company.stage }}</span>
           </div>
           <div class="company-desc">{{ company.description }}</div>
+          <div class="company-location">{{ company.location }}</div>
+          <div class="company-website">
+            <a :href="company.website" target="_blank">{{ company.website }}</a>
+          </div>
           <div class="company-jobs">
             <span class="job-count">{{ company.jobCount }}个在招职位</span>
             <span class="salary-range">{{ company.salaryRange }}</span>
@@ -88,6 +91,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { searchCompanies } from '@/api/companies' 
 
 const router = useRouter()
 const searchValue = ref('')
@@ -102,27 +106,27 @@ const companies = ref([])
 // 筛选选项
 const industries = [
   { label: '全部', value: 'all' },
-  { label: '互联网', value: 'internet' },
-  { label: '金融', value: 'finance' },
-  { label: '教育', value: 'education' },
-  { label: '医疗健康', value: 'medical' }
+  { label: '互联网', value: '互联网' },
+  { label: '金融', value: '金融' },
+  { label: '教育', value: '教育' },
+  { label: '医疗健康', value: '医疗健康' }
 ]
 
 const scales = [
   { label: '全部', value: 'all' },
-  { label: '0-20人', value: 'tiny' },
-  { label: '20-99人', value: 'small' },
-  { label: '100-499人', value: 'medium' },
-  { label: '500人以上', value: 'large' }
+  { label: '0-20人', value: '0-20人' },
+  { label: '20-99人', value: '20-99人' },
+  { label: '100-499人', value: '100-499人' },
+  { label: '500人以上', value: '500人以上' }
 ]
 
 const stages = [
   { label: '全部', value: 'all' },
-  { label: '未融资', value: 'none' },
-  { label: '天使轮', value: 'angel' },
-  { label: 'A轮', value: 'a' },
-  { label: 'B轮', value: 'b' },
-  { label: 'C轮及以上', value: 'c_plus' }
+  { label: '未融资', value: '未融资' },
+  { label: '天使轮', value: '天使轮' },
+  { label: 'A轮', value: 'A轮' },
+  { label: 'B轮', value: 'B轮' },
+  { label: 'C轮及以上', value: 'C轮及以上' }
 ]
 
 // 搜索处理
@@ -157,11 +161,21 @@ const handlePageChange = (page) => {
 // 获取公司列表
 const fetchCompanies = async () => {
   try {
-    // TODO: 替换为实际的API调用
-    const response = await fetch('/api/companies')
-    const data = await response.json()
-    companies.value = data.items
-    total.value = data.total
+    const params = {
+      keyword: searchValue.value || '',
+    }
+    if (currentIndustry.value !== 'all') {
+      params.keyword = currentIndustry.value
+    }
+    if (currentScale.value !== 'all') {
+      params.scale = currentScale.value
+    }
+    if (currentStage.value !== 'all') {
+      params.stage = currentStage.value
+    }
+    const response = await searchCompanies(params)
+    companies.value = response.data.content
+    total.value = response.data.totalElements
   } catch (error) {
     console.error('获取公司列表失败:', error)
   }
@@ -180,6 +194,7 @@ onMounted(() => {
 <style scoped>
 .company-page {
   padding: 20px;
+  background-color: #f4f6f8;
 }
 
 .filter-section {
@@ -206,6 +221,7 @@ onMounted(() => {
   color: #666;
   margin-right: 8px;
   white-space: nowrap;
+  font-weight: bold;
 }
 
 .filter-tag {
@@ -241,11 +257,12 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.3s;
   border: 1px solid #eee;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .company-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border-color: var(--primary-color);
 }
 
@@ -253,18 +270,19 @@ onMounted(() => {
   width: 80px;
   height: 80px;
   margin-bottom: 16px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .company-logo img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  border-radius: 8px;
+  object-fit: cover;
 }
 
 .company-name {
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: 600;
   margin: 0 0 12px;
   color: #333;
 }
@@ -291,6 +309,22 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.company-location {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.company-website a {
+  font-size: 14px;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.company-website a:hover {
+  text-decoration: underline;
 }
 
 .company-jobs {

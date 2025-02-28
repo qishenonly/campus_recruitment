@@ -50,6 +50,11 @@ const routes = [
         name: 'jobDetail',
         component: () => import('../views/job/JobDetail.vue'),
         meta: { title: '职位详情' }
+      },
+      {
+        path: 'company/:id',
+        name: 'CompanyDetail',
+        component: () => import('../views/company/CompanyDetail.vue')
       }
     ]
   }
