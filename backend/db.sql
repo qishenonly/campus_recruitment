@@ -109,11 +109,54 @@ CREATE TABLE notifications (
     user_id BIGINT NOT NULL,
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
-    type ENUM('SYSTEM', 'APPLICATION', 'MESSAGE') NOT NULL,
+    type ENUM('SYSTEM', 'APPLICATION', 'MESSAGE', 'INTERVIEW') NOT NULL,
     related_id BIGINT,
     is_read BOOLEAN DEFAULT FALSE,
     create_time DATETIME NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+-- 对话表
+CREATE TABLE conversations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    application_id BIGINT NOT NULL,
+    student_id BIGINT NOT NULL,
+    company_id BIGINT NOT NULL,
+    status ENUM('ACTIVE', 'CLOSED') NOT NULL DEFAULT 'ACTIVE',
+    create_time DATETIME NOT NULL,
+    update_time DATETIME NOT NULL,
+    FOREIGN KEY (application_id) REFERENCES applications(id),
+    FOREIGN KEY (student_id) REFERENCES students(id),
+    FOREIGN KEY (company_id) REFERENCES companies(id)
+);
+
+-- 消息表
+CREATE TABLE messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    conversation_id BIGINT NOT NULL,
+    sender_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    create_time DATETIME NOT NULL,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id),
+    FOREIGN KEY (sender_id) REFERENCES users(id)
+);
+
+-- 面试表
+CREATE TABLE interviews (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    application_id BIGINT NOT NULL,
+    interview_time DATETIME NOT NULL,
+    duration INT NOT NULL, -- 面试时长（分钟）
+    type ENUM('ONLINE', 'OFFLINE') NOT NULL,
+    location VARCHAR(200), -- 线下面试地点
+    online_url VARCHAR(200), -- 线上面试链接
+    description TEXT, -- 面试说明
+    status ENUM('PENDING', 'ACCEPTED', 'REJECTED', 'COMPLETED', 'CANCELED') NOT NULL DEFAULT 'PENDING',
+    feedback TEXT, -- 面试反馈
+    create_time DATETIME NOT NULL,
+    update_time DATETIME NOT NULL,
+    FOREIGN KEY (application_id) REFERENCES applications(id)
 );
 
 -- 插入示例数据
