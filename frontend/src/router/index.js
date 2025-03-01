@@ -55,6 +55,12 @@ const routes = [
         path: 'company/:id',
         name: 'CompanyDetail',
         component: () => import('../views/company/CompanyDetail.vue')
+      },
+      {
+        path: 'resume',
+        name: 'resume',
+        component: () => import('../views/mine/Resume.vue'),
+        meta: { title: '我的简历' }
       }
     ]
   }
