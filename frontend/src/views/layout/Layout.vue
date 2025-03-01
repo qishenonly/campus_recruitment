@@ -47,6 +47,12 @@
         <p>© 2024 青云直聘系统 All Rights Reserved</p>
       </div>
     </footer>
+
+    <!-- 使用 store 中的状态 -->
+    <complete-info-dialog
+      v-model="dialogStore.showCompleteInfo"
+      @complete="dialogStore.hideCompleteInfoDialog"
+    />
   </div>
 </template>
 
@@ -54,8 +60,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showDialog } from 'vant'
+import { useDialogStore } from '@/stores/dialog'
+import CompleteInfoDialog from '../auth/components/CompleteInfoDialog.vue'
 
 const router = useRouter()
+const dialogStore = useDialogStore()
 // 从 localStorage 获取用户信息
 const userInfo = ref(JSON.parse(localStorage.getItem('userInfo')))
 

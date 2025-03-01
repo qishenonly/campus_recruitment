@@ -85,6 +85,12 @@
         </div>
       </div>
     </div>
+
+    <!-- 完善信息弹窗 -->
+    <complete-info-dialog
+      v-model="showCompleteInfo"
+      @complete="handleInfoComplete"
+    />
   </div>
 </template>
 
@@ -93,11 +99,16 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { login } from '@/api/auth'
+import { getUserProfile } from '@/api/user'
+import { useDialogStore } from '@/stores/dialog'
+import CompleteInfoDialog from './components/CompleteInfoDialog.vue'
 
 const router = useRouter()
 const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 
 const loading = ref(false)
+const showCompleteInfo = ref(false)
+const dialogStore = useDialogStore()
 
 const formData = reactive({
   email: '',
@@ -120,21 +131,41 @@ const onSubmit = async () => {
       message: '登录成功',
       type: 'success'
     })
-    
-    // 根据角色跳转
-    const role = res.data.role
-    if (role === 'STUDENT') {
-      router.push('/home')
-    } else if (role === 'COMPANY') {
-      router.push('/company/home')
-    } else if (role === 'ADMIN') {
-      router.push('/admin')
+
+    // 先跳转到首页
+    await router.push('/home')
+
+    // 如果是学生用户,检查是否需要完善信息
+    if (res.data.role === 'STUDENT') {
+      try {
+        const profileRes = await getUserProfile()
+        // 只有在获取不到用户资料时才显示完善信息弹窗
+        if (!profileRes.data) {
+          setTimeout(() => {
+            dialogStore.showCompleteInfoDialog()
+          }, 300)
+        }
+      } catch (error) {
+        console.error('获取用户资料失败:', error)
+        // 如果获取资料失败,也显示完善信息弹窗
+        setTimeout(() => {
+          dialogStore.showCompleteInfoDialog()
+        }, 300)
+      }
     }
   } catch (error) {
     console.error('登录失败:', error)
+    showToast({
+      message: error.message || '登录失败',
+      type: 'fail'
+    })
   } finally {
     loading.value = false
   }
+}
+
+const handleInfoComplete = () => {
+  showCompleteInfo.value = false
 }
 
 const handleSocialLogin = (type) => {

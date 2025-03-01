@@ -15,6 +15,9 @@ import 'vant/lib/index.css'
 import 'amfe-flexible'
 import App from './App.vue'
 import './style.css'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 
 // 设置 rem 基准值
 const setRem = () => {
@@ -40,5 +43,8 @@ app.use(CellGroup)
 app.use(Checkbox)
 app.use(Dialog)
 app.use(Icon)
+app.use(ElementPlus, {
+  locale: zhCn,
+})
 
 app.mount('#app')

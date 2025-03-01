@@ -118,7 +118,10 @@ import { ref, onMounted } from 'vue'
 import { showToast } from 'vant'
 import JobList from '@/components/JobList.vue'
 import { getJobs, searchJobs } from '@/api/jobs'
+import { getUserProfile } from '@/api/user'
+import { useDialogStore } from '@/stores/dialog'
 
+const dialogStore = useDialogStore()
 const searchValue = ref('')
 const location = ref('全部')
 const experience = ref('不限')
@@ -208,8 +211,35 @@ const fetchJobs = async () => {
   }
 }
 
+const completeStudentInfo = async () => {
+  const res = localStorage.getItem('userInfo')
+  if (!res) {
+    return
+  }
+  const userInfo = JSON.parse(res)
+  if (userInfo.role === 'STUDENT') {
+    try {
+        const profileRes = await getUserProfile()
+        console.log('profileRes',profileRes)
+        // 只有在获取不到用户资料时才显示完善信息弹窗
+        if (!profileRes.data) {
+          setTimeout(() => {
+            dialogStore.showCompleteInfoDialog()
+          }, 300)
+        }
+      } catch (error) {
+        console.error('获取用户资料失败:', error)
+        // 如果获取资料失败,也显示完善信息弹窗
+        setTimeout(() => {
+          dialogStore.showCompleteInfoDialog()
+        }, 300)
+      }
+  }
+}
+
 onMounted(() => {
   fetchJobs()
+  completeStudentInfo()
 })
 </script>
 
