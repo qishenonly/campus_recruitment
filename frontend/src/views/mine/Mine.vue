@@ -1,539 +1,601 @@
 <template>
   <div class="mine-page">
-    <!-- 个人信息卡片 -->
-    <div class="user-card">
-      <div class="user-info">
-        <div class="avatar-wrapper">
-          <img 
-            :src="userInfo.avatar || 'https://placeholder.com/150'" 
-            class="avatar"
-            alt="用户头像"
-          />
-          <div class="upload-mask">
-            <van-icon name="photograph" />
-            <span>更换头像</span>
+    <!-- 顶部背景和个人信息卡片 -->
+    <div class="profile-header">
+      <div class="header-bg"></div>
+      <div class="profile-card">
+        <div class="profile-info">
+          <div class="avatar-wrapper">
+            <img :src="userProfile?.avatar || 'http'" alt="头像" class="avatar" />
+            <div class="online-status"></div>
+          </div>
+          <div class="user-info">
+            <h2 class="name">{{ userProfile?.realName || userProfile?.user?.username }}</h2>
+            <p class="title">{{ userProfile?.expectedPosition || '暂无职位' }}</p>
+            <div class="tags">
+              <el-tag size="small" effect="plain">{{ userProfile?.education }}</el-tag>
+              <el-tag size="small" effect="plain" type="success">{{ userProfile?.university }}</el-tag>
+              <el-tag size="small" effect="plain" type="warning">{{ userProfile?.major }}</el-tag>
+            </div>
+          </div>
+          <div class="edit-btn">
+            <el-button type="primary" plain round @click="handleEdit">
+              <el-icon><Edit /></el-icon>编辑资料
+            </el-button>
           </div>
         </div>
-        <div class="info-content">
-          <h2 class="username">{{ userInfo.name || '未登录' }}</h2>
-          <p class="user-desc">{{ userInfo.title || '添加个人介绍' }}</p>
-          <div class="user-tags">
-            <span class="tag" v-for="tag in userInfo.tags" :key="tag">{{ tag }}</span>
+        
+        <!-- 快捷统计信息 -->
+        <div class="quick-stats">
+          <div class="stat-item">
+            <span class="number">12</span>
+            <span class="label">投递记录</span>
           </div>
-        </div>
-      </div>
-      <div class="user-stats">
-        <div class="stat-item">
-          <span class="stat-num">{{ statistics.views }}</span>
-          <span class="stat-label">简历被查看</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ statistics.delivers }}</span>
-          <span class="stat-label">投递记录</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-num">{{ statistics.collects }}</span>
-          <span class="stat-label">职位收藏</span>
+          <div class="stat-item">
+            <span class="number">5</span>
+            <span class="label">面试邀约</span>
+          </div>
+          <div class="stat-item">
+            <span class="number">8</span>
+            <span class="label">收藏职位</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 功能区域 -->
-    <div class="function-area">
-      <!-- 简历管理 -->
-      <div class="section-card">
-        <div class="section-header">
+    <!-- 功能卡片区域 -->
+    <div class="feature-cards">
+      <div class="feature-card" @click="handleResume">
+        <div class="feature-icon">
+          <el-icon><Document /></el-icon>
+        </div>
+        <div class="feature-info">
           <h3>我的简历</h3>
-          <van-button type="primary" size="small" icon="plus" @click="createResume">
-            创建简历
-          </van-button>
+          <p>完善简历提高求职成功率</p>
         </div>
-        <div class="resume-list" v-if="resumes.length">
-          <div 
-            v-for="resume in resumes" 
-            :key="resume.id" 
-            class="resume-item"
-          >
-            <div class="resume-info">
-              <h4>{{ resume.name }}</h4>
-              <p class="resume-update-time">最后更新：{{ formatTime(resume.updateTime) }}</p>
-              <div class="resume-progress">
-                <div class="progress-bar">
-                  <div 
-                    class="progress-inner" 
-                    :style="{ width: resume.completeness + '%' }"
-                  ></div>
-                </div>
-                <span class="progress-text">完整度 {{ resume.completeness }}%</span>
-              </div>
-            </div>
-            <div class="resume-actions">
-              <van-button type="primary" plain size="small" @click="editResume(resume.id)">
-                编辑
-              </van-button>
-              <van-button type="danger" plain size="small" @click="deleteResume(resume.id)">
-                删除
-              </van-button>
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-block">
-          <van-empty description="暂无简历" />
-        </div>
+        <el-icon class="arrow"><ArrowRight /></el-icon>
       </div>
 
-      <!-- 投递记录 -->
-      <div class="section-card">
-        <div class="section-header">
+      <div class="feature-card" @click="handleDeliveryRecord">
+        <div class="feature-icon blue">
+          <el-icon><Paperclip /></el-icon>
+        </div>
+        <div class="feature-info">
           <h3>投递记录</h3>
-          <router-link to="/delivers" class="view-all">
-            查看全部
-            <van-icon name="arrow" />
-          </router-link>
+          <p>{{ deliveryCount || 0 }}份简历投递中</p>
         </div>
-        <div class="deliver-list" v-if="delivers.length">
-          <div 
-            v-for="deliver in delivers" 
-            :key="deliver.id" 
-            class="deliver-item"
-          >
-            <div class="deliver-info">
-              <h4>{{ deliver.jobTitle }}</h4>
-              <p class="company-name">{{ deliver.companyName }}</p>
-              <p class="deliver-time">投递时间：{{ formatTime(deliver.deliverTime) }}</p>
-            </div>
-            <div class="deliver-status" :class="deliver.status">
-              {{ getStatusText(deliver.status) }}
-            </div>
-          </div>
-        </div>
-        <div v-else class="empty-block">
-          <van-empty description="暂无投递记录" />
-        </div>
+        <el-icon class="arrow"><ArrowRight /></el-icon>
       </div>
 
-      <!-- 收藏职位 -->
-      <div class="section-card">
-        <div class="section-header">
-          <h3>收藏职位</h3>
-          <router-link to="/collections" class="view-all">
-            查看全部
-            <van-icon name="arrow" />
-          </router-link>
+      <div class="feature-card" @click="handleFavorites">
+        <div class="feature-icon green">
+          <el-icon><Star /></el-icon>
         </div>
-        <div class="collection-list" v-if="collections.length">
-          <div 
-            v-for="job in collections" 
-            :key="job.id" 
-            class="collection-item"
-          >
-            <div class="job-info">
-              <h4>{{ job.title }}</h4>
-              <p class="company-name">{{ job.companyName }}</p>
-              <p class="job-salary">{{ job.salary }}K</p>
-            </div>
-            <div class="collection-actions">
-              <van-button type="primary" size="small" @click="applyJob(job.id)">
-                投递简历
-              </van-button>
-            </div>
+        <div class="feature-info">
+          <h3>收藏职位</h3>
+          <p>{{ favoriteCount || 0 }}个职位已收藏</p>
+        </div>
+        <el-icon class="arrow"><ArrowRight /></el-icon>
+      </div>
+
+      <div class="feature-card" @click="handleSettings">
+        <div class="feature-icon purple">
+          <el-icon><Setting /></el-icon>
+        </div>
+        <div class="feature-info">
+          <h3>账号设置</h3>
+          <p>修改密码等安全设置</p>
+        </div>
+        <el-icon class="arrow"><ArrowRight /></el-icon>
+      </div>
+    </div>
+
+    <!-- 详细信息卡片 -->
+    <div class="detail-cards">
+      <!-- 基本信息卡片 -->
+      <el-card class="info-card">
+        <template #header>
+          <div class="card-header">
+            <span><el-icon><User /></el-icon>基本信息</span>
+          </div>
+        </template>
+        <div class="info-grid">
+          <div class="info-item">
+            <el-icon><Male /></el-icon>
+            <span class="label">性别</span>
+            <span class="value">{{ userProfile?.gender }}</span>
+          </div>
+          <div class="info-item">
+            <el-icon><Calendar /></el-icon>
+            <span class="label">出生日期</span>
+            <span class="value">{{ userProfile?.birth }}</span>
+          </div>
+          <div class="info-item">
+            <el-icon><Location /></el-icon>
+            <span class="label">所在地</span>
+            <span class="value">{{ userProfile?.location }}</span>
+          </div>
+          <div class="info-item">
+            <el-icon><Message /></el-icon>
+            <span class="label">邮箱</span>
+            <span class="value">{{ userProfile?.user?.email }}</span>
           </div>
         </div>
-        <div v-else class="empty-block">
-          <van-empty description="暂无收藏职位" />
+      </el-card>
+
+      <!-- 教育信息卡片 -->
+      <el-card class="info-card">
+        <template #header>
+          <div class="card-header">
+            <span><el-icon><School /></el-icon>教育背景</span>
+          </div>
+        </template>
+        <div class="education-info">
+          <div class="school-logo">
+            <el-icon size="40"><School /></el-icon>
+          </div>
+          <div class="education-details">
+            <h3>{{ userProfile?.university }}</h3>
+            <p>{{ userProfile?.major }} | {{ userProfile?.education }}</p>
+            <p class="graduation">预计 {{ userProfile?.graduationYear }} 年毕业</p>
+          </div>
         </div>
-      </div>
+      </el-card>
+
+      <!-- 求职意向卡片 -->
+      <el-card class="info-card">
+        <template #header>
+          <div class="card-header">
+            <span><el-icon><Aim /></el-icon>求职意向</span>
+          </div>
+        </template>
+        <div class="job-intention">
+          <div class="intention-item">
+            <el-icon><Position /></el-icon>
+            <span class="label">期望职位</span>
+            <span class="value highlight">{{ userProfile?.expectedPosition }}</span>
+          </div>
+          <div class="intention-item">
+            <el-icon><Money /></el-icon>
+            <span class="label">期望薪资</span>
+            <span class="value highlight">{{ userProfile?.expectedSalary }}</span>
+          </div>
+          <div class="intention-item">
+            <el-icon><Location /></el-icon>
+            <span class="label">期望城市</span>
+            <span class="value">{{ userProfile?.expectedCity }}</span>
+          </div>
+        </div>
+      </el-card>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { formatDistance } from 'date-fns'
-import { zhCN } from 'date-fns/locale'
+import { getUserProfile } from '@/api/user'
+import { useDialogStore } from '@/stores/dialog'
+import {
+  Edit,
+  User,
+  Male,
+  Calendar,
+  Location,
+  Message,
+  School,
+  Aim,
+  Position,
+  Money,
+  Document,
+  Paperclip,
+  Star,
+  Setting,
+  ArrowRight
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
+const userProfile = ref(null)
+const dialogStore = useDialogStore()
+const deliveryCount = ref(0)
+const favoriteCount = ref(0)
 
-// 用户信息
-const userInfo = ref({
-  name: '张三',
-  avatar: '',
-  title: '应届生 | 计算机科学与技术',
-  tags: ['Java', 'Spring Boot', 'Vue.js']
+onMounted(async () => {
+  try {
+    const res = await getUserProfile()
+    userProfile.value = res.data
+  } catch (error) {
+    console.error('获取用户资料失败:', error)
+  }
 })
 
-// 统计数据
-const statistics = ref({
-  views: 12,
-  delivers: 5,
-  collects: 8
-})
-
-// 简历列表
-const resumes = ref([
-  {
-    id: 1,
-    name: '个人简历.pdf',
-    updateTime: '2024-01-20T10:00:00',
-    completeness: 85
-  }
-])
-
-// 投递记录
-const delivers = ref([
-  {
-    id: 1,
-    jobTitle: '前端开发工程师',
-    companyName: 'XX科技有限公司',
-    deliverTime: '2024-01-19T15:30:00',
-    status: 'pending'
-  }
-])
-
-// 收藏的职位
-const collections = ref([
-  {
-    id: 1,
-    title: 'Java开发工程师',
-    companyName: 'XX科技有限公司',
-    salary: '15-25'
-  }
-])
-
-// 格式化时间
-const formatTime = (time) => {
-  return formatDistance(new Date(time), new Date(), {
-    addSuffix: true,
-    locale: zhCN
-  })
+const handleEdit = () => {
+  dialogStore.showCompleteInfoDialog()
 }
 
-// 获取投递状态文本
-const getStatusText = (status) => {
-  const statusMap = {
-    pending: '待处理',
-    reviewing: '审核中',
-    interviewed: '已面试',
-    rejected: '不合适',
-    accepted: '已录用'
-  }
-  return statusMap[status] || status
+const handleResume = () => {
+  router.push('/resume')
 }
 
-// 创建简历
-const createResume = () => {
-  router.push('/resume/create')
+const handleDeliveryRecord = () => {
+  router.push('/delivery-record')
 }
 
-// 编辑简历
-const editResume = (id) => {
-  router.push(`/resume/edit/${id}`)
+const handleFavorites = () => {
+  router.push('/favorites')
 }
 
-// 删除简历
-const deleteResume = async (id) => {
-  try {
-    // TODO: 调用删除简历 API
-    console.log('删除简历:', id)
-  } catch (error) {
-    console.error('删除简历失败:', error)
-  }
-}
-
-// 投递简历
-const applyJob = async (jobId) => {
-  try {
-    // TODO: 调用投递简历 API
-    console.log('投递职位:', jobId)
-  } catch (error) {
-    console.error('投递简历失败:', error)
-  }
+const handleSettings = () => {
+  router.push('/settings')
 }
 </script>
 
 <style scoped>
 .mine-page {
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  padding-bottom: 40px;
+}
+
+.profile-header {
+  position: relative;
+  padding-top: 100px;
+  margin-bottom: 24px;
+}
+
+.header-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(135deg, var(--el-color-primary), var(--el-color-primary-light-3));
+  z-index: 1;
+}
+
+.profile-card {
+  position: relative;
+  z-index: 2;
   max-width: 1000px;
   margin: 0 auto;
-  padding: 20px;
-}
-
-.user-card {
   background: white;
   border-radius: 12px;
-  padding: 30px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 24px;
 }
 
-.user-info {
+.profile-info {
   display: flex;
+  align-items: center;
   gap: 24px;
-  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #eee;
 }
 
 .avatar-wrapper {
   position: relative;
-  width: 120px;
-  height: 120px;
-  border-radius: 60px;
-  overflow: hidden;
 }
 
 .avatar {
-  width: 100%;
-  height: 100%;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 4px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   object-fit: cover;
 }
 
-.upload-mask {
+.online-status {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0, 0, 0, 0.6);
-  color: white;
-  padding: 8px;
-  text-align: center;
-  font-size: 12px;
-  opacity: 0;
-  transition: opacity 0.3s;
-  cursor: pointer;
+  bottom: 5px;
+  right: 5px;
+  width: 12px;
+  height: 12px;
+  background-color: #67c23a;
+  border-radius: 50%;
+  border: 2px solid white;
 }
 
-.avatar-wrapper:hover .upload-mask {
-  opacity: 1;
-}
-
-.info-content {
+.user-info {
   flex: 1;
 }
 
-.username {
-  margin: 0 0 8px;
+.name {
   font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 4px;
   color: #333;
 }
 
-.user-desc {
-  margin: 0 0 16px;
-  color: #666;
+.title {
   font-size: 16px;
+  color: #666;
+  margin: 0 0 12px;
 }
 
-.user-tags {
+.tags {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
-.tag {
-  padding: 4px 12px;
-  background: #f5f5f5;
-  border-radius: 16px;
-  font-size: 14px;
-  color: #666;
-}
-
-.user-stats {
-  display: flex;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 24px;
-}
-
-.stat-item {
-  flex: 1;
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 24px;
   text-align: center;
 }
 
-.stat-num {
-  display: block;
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--primary-color);
-  margin-bottom: 8px;
+.stat-item {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
-.stat-label {
+.stat-item .number {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  margin-bottom: 4px;
+}
+
+.stat-item .label {
   color: #666;
   font-size: 14px;
 }
 
-.function-area {
+.detail-cards {
+  max-width: 1000px;
+  margin: 0 auto;
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 24px;
+  padding: 0 20px;
 }
 
-.section-card {
+.info-card {
   background: white;
-  border-radius: 8px;
-  padding: 24px;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
-.section-header {
+.card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.section-header h3 {
-  margin: 0;
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-item .label {
+  color: #999;
+  margin-right: 8px;
+}
+
+.info-item .value {
+  color: #333;
+  flex: 1;
+}
+
+.education-info {
+  display: flex;
+  gap: 20px;
+  padding: 16px;
+}
+
+.school-logo {
+  width: 60px;
+  height: 60px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.education-details h3 {
+  margin: 0 0 8px;
   font-size: 18px;
   color: #333;
 }
 
-.view-all {
+.education-details p {
+  margin: 0;
   color: #666;
-  text-decoration: none;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  line-height: 1.5;
 }
 
-.resume-list,
-.deliver-list,
-.collection-list {
+.graduation {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #999;
+}
+
+.job-intention {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.resume-item,
-.deliver-item,
-.collection-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  transition: all 0.3s;
-}
-
-.resume-item:hover,
-.deliver-item:hover,
-.collection-item:hover {
-  background: #f0f0f0;
-}
-
-.resume-info,
-.deliver-info,
-.job-info {
-  flex: 1;
-}
-
-.resume-info h4,
-.deliver-info h4,
-.job-info h4 {
-  margin: 0 0 8px;
-  font-size: 16px;
-  color: #333;
-}
-
-.resume-update-time,
-.deliver-time,
-.company-name {
-  margin: 0;
-  font-size: 14px;
-  color: #999;
-}
-
-.resume-progress {
-  margin-top: 12px;
+.intention-item {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
 }
 
-.progress-bar {
-  flex: 1;
-  height: 6px;
-  background: #f0f0f0;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-inner {
-  height: 100%;
-  background: var(--primary-color);
-  transition: width 0.3s;
-}
-
-.progress-text {
-  font-size: 14px;
+.intention-item .label {
   color: #666;
-  white-space: nowrap;
+  min-width: 80px;
 }
 
-.resume-actions,
-.collection-actions {
-  display: flex;
-  gap: 8px;
+.intention-item .value {
+  flex: 1;
+  color: #333;
 }
 
-.deliver-status {
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 14px;
-}
-
-.deliver-status.pending {
-  background: #e6f7ff;
-  color: var(--primary-color);
-}
-
-.deliver-status.reviewing {
-  background: #fff7e6;
-  color: var(--warning-color);
-}
-
-.deliver-status.interviewed {
-  background: #f6ffed;
-  color: var(--success-color);
-}
-
-.deliver-status.rejected {
-  background: #fff1f0;
-  color: var(--error-color);
-}
-
-.deliver-status.accepted {
-  background: #f6ffed;
-  color: var(--success-color);
-}
-
-.empty-block {
-  padding: 40px 0;
-  text-align: center;
+.intention-item .highlight {
+  color: var(--el-color-primary);
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
-  .user-info {
+  .profile-header {
+    padding-top: 60px;
+  }
+
+  .profile-info {
     flex-direction: column;
-    align-items: center;
     text-align: center;
   }
 
-  .user-stats {
-    flex-wrap: wrap;
-    gap: 16px;
+  .edit-btn {
+    margin-top: 16px;
   }
 
-  .resume-item,
-  .deliver-item,
-  .collection-item {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
+  .quick-stats {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  .resume-actions,
-  .collection-actions {
-    width: 100%;
-    justify-content: flex-end;
+  .detail-cards {
+    grid-template-columns: 1fr;
+    padding: 0 12px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
   }
 }
-</style> 
+
+.feature-cards {
+  max-width: 1000px;
+  margin: 24px auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.feature-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(to left, rgba(255,255,255,0.8), transparent);
+  transform: skewX(-15deg) translateX(100%);
+  transition: transform 0.5s ease;
+}
+
+.feature-card:hover::after {
+  transform: skewX(-15deg) translateX(0);
+}
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.feature-icon.blue {
+  background: var(--el-color-info-light-9);
+  color: var(--el-color-info);
+}
+
+.feature-icon.green {
+  background: var(--el-color-success-light-9);
+  color: var(--el-color-success);
+}
+
+.feature-icon.purple {
+  background: var(--el-color-warning-light-9);
+  color: var(--el-color-warning);
+}
+
+.feature-info {
+  flex: 1;
+}
+
+.feature-info h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.feature-info p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #999;
+}
+
+.arrow {
+  color: #ccc;
+  font-size: 20px;
+  transition: transform 0.3s ease;
+}
+
+.feature-card:hover .arrow {
+  transform: translateX(4px);
+  color: var(--el-color-primary);
+}
+
+@media (max-width: 768px) {
+  .feature-cards {
+    grid-template-columns: 1fr;
+    padding: 0 12px;
+  }
+
+  .feature-card {
+    padding: 16px;
+  }
+
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+}
+</style>
