@@ -175,6 +175,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserProfile } from '@/api/user'
+import { getFavorites } from '@/api/jobs'
 import { useDialogStore } from '@/stores/dialog'
 import {
   Edit,
@@ -206,6 +207,13 @@ onMounted(async () => {
     userProfile.value = res.data
   } catch (error) {
     console.error('获取用户资料失败:', error)
+  }
+
+  try {
+    const res = await getFavorites()
+    favoriteCount.value = res.data.totalElements
+  } catch (error) {
+    console.error('获取收藏数量失败:', error)
   }
 })
 
@@ -597,5 +605,14 @@ const handleSettings = () => {
     height: 40px;
     font-size: 20px;
   }
+}
+
+.favorite-count {
+  background: #ff4d4f;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 12px;
+  margin-right: 8px;
 }
 </style>

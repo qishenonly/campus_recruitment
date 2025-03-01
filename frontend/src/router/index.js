@@ -61,6 +61,12 @@ const routes = [
         name: 'resume',
         component: () => import('../views/mine/Resume.vue'),
         meta: { title: '我的简历' }
+      },
+      {
+        path: 'favorites',
+        name: 'favorites',
+        component: () => import('../views/mine/Favorites.vue'),
+        meta: { title: '我的收藏' }
       }
     ]
   }

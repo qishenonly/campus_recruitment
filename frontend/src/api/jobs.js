@@ -34,10 +34,46 @@ export function getCompanyJobs(companyId) {
   })
 }
 
+// 收藏职位
+export function favoriteJob(jobId) {
+  return request({
+    url: `/jobs/${jobId}/favorite`,
+    method: 'post'
+  })
+}
+
+// 取消收藏
+export function unfavoriteJob(jobId) {
+  return request({
+    url: `/jobs/${jobId}/favorite`, 
+    method: 'delete'
+  })
+}
+
+// 获取收藏状态
+export function getFavoriteStatus(jobId) {
+  return request({
+    url: `/jobs/${jobId}/favorite`,
+    method: 'get'
+  })
+}
+
+// 获取收藏列表
+export function getFavorites() {
+  return request({
+    url: '/jobs/favorites',
+    method: 'get'
+  })
+}
+
 // 确保导出所有需要的函数
 export default {
   getJobs,
   getJobDetail,
   searchJobs,
-  getCompanyJobs
+  getCompanyJobs,
+  favoriteJob,
+  unfavoriteJob,
+  getFavoriteStatus,
+  getFavorites
 }

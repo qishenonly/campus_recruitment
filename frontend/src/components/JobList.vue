@@ -26,14 +26,21 @@
               </div>
             </div>
           </div>
-          <van-button 
-            type="primary" 
-            size="small" 
-            class="apply-btn"
-            @click.stop="handleApply(job.id)"
-          >
-            立即投递
-          </van-button>
+          <div class="action-buttons">
+            <van-icon
+              :name="job.isFavorited ? 'star' : 'star-o'"
+              :class="['favorite-icon', { 'is-favorited': job.isFavorited }]"
+              @click.stop="handleFavorite(job)"
+            />
+            <van-button 
+              type="primary" 
+              size="small" 
+              class="apply-btn"
+              @click.stop="handleApply(job.id)"
+            >
+              立即投递
+            </van-button>
+          </div>
         </div>
       </div>
     </div>
@@ -43,6 +50,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { favoriteJob, unfavoriteJob } from '@/api/jobs'
 
 const router = useRouter()
 const props = defineProps({
@@ -51,16 +59,6 @@ const props = defineProps({
     default: () => []
   }
 })
-
-// 获取公司logo（临时方案，后续需要从后端获取）
-const getCompanyLogo = (companyId) => {
-  return `https://via.placeholder.com/48?text=Logo${companyId}`
-}
-
-// 获取公司名称（临时方案，后续需要从后端获取）
-const getCompanyName = (companyId) => {
-  return `公司${companyId}`
-}
 
 // 跳转到职位详情
 const goToJobDetail = (id) => {
@@ -74,6 +72,30 @@ const handleApply = async (jobId) => {
     showToast('投递成功')
   } catch (error) {
     showToast('投递失败')
+  }
+
+}
+
+const handleFavorite = async (job) => {
+  try {
+    if (!localStorage.getItem('token')) {
+      showToast('请先登录')
+      router.push('/login')
+      return
+    }
+
+    if (job.isFavorited) {
+      await unfavoriteJob(job.id)
+      job.isFavorited = false
+      showToast('已取消收藏')
+    } else {
+      await favoriteJob(job.id)
+      job.isFavorited = true 
+      showToast('收藏成功')
+    }
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    showToast(error.message || '操作失败')
   }
 }
 </script>
@@ -185,6 +207,22 @@ const handleApply = async (jobId) => {
 .company-name {
   font-size: 14px;
   color: #666;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.favorite-icon {
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+}
+
+.favorite-icon.is-favorited {
+  color: #ff9800;
 }
 
 .apply-btn {

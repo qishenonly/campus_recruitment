@@ -34,8 +34,19 @@
       <van-button type="primary" size="large" @click="handleApply">
         立即投递
       </van-button>
-      <van-button plain size="large" @click="toggleCollect">
-        {{ isCollected ? '取消收藏' : '收藏职位' }}
+      <van-button 
+        :type="isCollected ? 'warning' : 'default'"
+        size="large" 
+        @click="toggleCollect"
+        class="collect-btn"
+      >
+        <van-icon 
+          :name="isCollected ? 'star' : 'star-o'" 
+          :class="{ 'collected-icon': isCollected }"
+        />
+        <span :class="{ 'collected-text': isCollected }">
+          {{ isCollected ? '取消收藏' : '收藏职位' }}
+        </span>
       </van-button>
     </div>
 
@@ -75,7 +86,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { getJobDetail } from '../../api/jobs'
+import { getJobDetail, favoriteJob, unfavoriteJob, getFavoriteStatus } from '@/api/jobs'
 import JobList from '@/components/JobList.vue'
 
 const route = useRoute()
@@ -89,13 +100,20 @@ const formatRequirements = computed(() => {
   return jobInfo.value.requirements.split('\n').join('<br>')
 })
 
+const checkFavoriteStatus = async (jobId) => {
+  return getFavoriteStatus(jobId)
+}
+
 const fetchJobDetail = async () => {
   try {
     const id = route.params.id
-    console.log('Fetching job detail for id:', id) // 调试日志
-    const result = await getJobDetail(id)
-    console.log('Job detail result:', result) // 调试日志
-    jobInfo.value = result.data
+    const [jobResult, favoriteResult] = await Promise.all([
+      getJobDetail(id),
+      checkFavoriteStatus(id)
+    ])
+    
+    jobInfo.value = jobResult.data
+    isCollected.value = favoriteResult.data
   } catch (error) {
     console.error('获取职位详情失败:', error)
     showToast('获取职位详情失败')
@@ -121,10 +139,25 @@ const handleApply = async () => {
 
 const toggleCollect = async () => {
   try {
-    isCollected.value = !isCollected.value
-    showToast(isCollected.value ? '收藏成功' : '已取消收藏')
+    const token = localStorage.getItem('token')
+    if (!token) {
+      showToast('请先登录')
+      router.push('/login')
+      return
+    }
+
+    if (isCollected.value) {
+      await unfavoriteJob(jobInfo.value.id)
+      isCollected.value = false
+      showToast('已取消收藏')
+    } else {
+      await favoriteJob(jobInfo.value.id)
+      isCollected.value = true
+      showToast('收藏成功')
+    }
   } catch (error) {
-    showToast('操作失败')
+    console.error('收藏操作失败:', error)
+    showToast(error.response?.data?.message || '操作失败')
   }
 }
 
@@ -236,6 +269,34 @@ onMounted(() => {
   display: flex;
   gap: 16px;
   margin-bottom: 16px;
+  padding: 16px;
+}
+
+.job-actions .van-button {
+  flex: 1;
+  height: 44px;
+}
+
+.collect-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.collect-btn.van-button--warning {
+  background-color: #ff9800;
+  border-color: #ff9800;
+}
+
+.collected-icon,
+.collected-text {
+  color: #ffffff !important;
+}
+
+.van-icon {
+  font-size: 16px;
+  vertical-align: middle;
 }
 
 .detail-content {
