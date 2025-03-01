@@ -18,7 +18,7 @@ CREATE TABLE users (
 
 -- 学生表
 CREATE TABLE students (
-    id BIGINT PRIMARY KEY,
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
     real_name VARCHAR(50) NOT NULL,
     university VARCHAR(100) NOT NULL,
     major VARCHAR(100) NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE students (
 
 -- 企业表
 CREATE TABLE companies (
-    id BIGINT PRIMARY KEY,
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
     company_name VARCHAR(100) NOT NULL,
     industry VARCHAR(50) NOT NULL,
     scale VARCHAR(50),

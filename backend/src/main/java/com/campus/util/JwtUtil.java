@@ -58,4 +58,21 @@ public class JwtUtil {
             return false;
         }
     }
+
+    public static Long getUserIdFromToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()))
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            
+            return Long.parseLong(claims.get("userId").toString());
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid token");
+        }
+    }
+
+    // 为了方便静态方法访问，添加静态密钥
+    private static final String SECRET_KEY = "your-secret-key-should-be-very-long-and-secure-at-least-256-bits";
 } 
