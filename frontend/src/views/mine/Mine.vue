@@ -36,7 +36,7 @@
             <span class="label">面试邀约</span>
           </div>
           <div class="stat-item">
-            <span class="number">8</span>
+            <span class="number">{{ favoriteCount }}</span>
             <span class="label">收藏职位</span>
           </div>
         </div>
@@ -235,6 +235,25 @@ const handleFavorites = () => {
 
 const handleSettings = () => {
   router.push('/settings')
+}
+
+// 获取用户信息的方法
+const getUserInfo = async () => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    if (!userInfo.token) {
+      router.push('/login')
+      return
+    }
+    // 重新获取最新的用户信息
+    const res = await getUserProfile()
+    if (res.data) {
+      // 更新用户信息
+      userProfile.value = res.data
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+  }
 }
 </script>
 

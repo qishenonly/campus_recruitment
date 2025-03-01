@@ -42,8 +42,24 @@ const routes = [
       {
         path: 'mine',
         name: 'mine',
-        component: () => import('../views/mine/Mine.vue'),
-        meta: { title: '我的' }
+        component: () => {
+          const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+          const lastVisitedRole = localStorage.getItem('lastVisitedRole')
+          
+          // 如果角色发生变化（说明是切换用户登录了），则刷新页面
+          if (userInfo.role && lastVisitedRole !== userInfo.role) {
+            localStorage.setItem('lastVisitedRole', userInfo.role)
+            window.location.reload()
+          }
+          
+          return userInfo.role === 'COMPANY' 
+            ? import('../views/mine/CompanyMine.vue')
+            : import('../views/mine/Mine.vue')
+        },
+        meta: { 
+          title: '我的',
+          keepAlive: false
+        }
       },
       {
         path: 'job/:id',
