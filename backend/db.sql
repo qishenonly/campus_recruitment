@@ -159,6 +159,17 @@ CREATE TABLE interviews (
     FOREIGN KEY (application_id) REFERENCES applications(id)
 );
 
+-- 职位收藏表
+CREATE TABLE job_favorites (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    student_id BIGINT NOT NULL,
+    job_id BIGINT NOT NULL,
+    create_time DATETIME NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES students(id),
+    FOREIGN KEY (job_id) REFERENCES jobs(id),
+    UNIQUE KEY `uk_student_job` (`student_id`, `job_id`)  -- 防止重复收藏
+);
+
 -- 插入示例数据
 -- 1. 插入用户
 INSERT INTO users (id, username, password, email, phone, role, create_time, update_time, status) VALUES
