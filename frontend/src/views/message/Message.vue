@@ -15,56 +15,88 @@
 
     <!-- 消息列表 -->
     <div class="message-list">
-      <template v-if="messages.length">
-        <div 
-          v-for="message in messages" 
-          :key="message.id" 
-          :class="['message-item', { unread: !message.isRead }]"
-          @click="handleMessageClick(message)"
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+        <van-list
+          v-model:loading="loading"
+          :finished="finished"
+          finished-text="没有更多了"
+          @load="onLoad"
         >
-          <div class="message-icon">
-            <van-icon :name="getMessageIcon(message.type)" :color="getMessageColor(message.type)" size="24" />
-          </div>
-          <div class="message-content">
-            <div class="message-header">
-              <span class="message-title">{{ message.title }}</span>
-              <span class="message-time">{{ formatTime(message.createTime) }}</span>
+          <template v-if="conversations.length > 0">
+            <div 
+              v-for="conversation in conversationsWithInfo" 
+              :key="conversation.id"
+              class="message-item"
+              @click="goToChat(conversation)"
+            >
+              <div class="avatar">
+                <van-image
+                  round
+                  width="50"
+                  height="50"
+                  :src="conversation.companyInfo?.avatar || '/default-avatar.png'"
+                  fit="cover"
+                />
+                <div class="online-status"></div>
+              </div>
+              <div class="content">
+                <div class="header">
+                  <span class="company-name">{{ conversation.companyInfo?.username || '未知企业' }}</span>
+                  <span class="time">{{ formatTime(conversation.createTime) }}</span>
+                </div>
+                <div class="message-preview">
+                  <span class="preview-text">{{ conversation.content || '暂无消息' }}</span>
+                  <div v-if="conversation.unreadCount" class="unread-count">
+                    {{ conversation.unreadCount }}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="message-body">{{ message.content }}</div>
-            <div v-if="message.type === 'job'" class="message-actions">
-              <van-button size="small" type="primary" @click.stop="viewJobDetail(message.jobId)">
-                查看职位
+            
+            <!-- 加载更多按钮 -->
+            <div v-if="!finished && !loading" class="load-more">
+              <van-button 
+                plain 
+                block 
+                :loading="loading"
+                loading-text="加载中..."
+                @click="loadMore"
+              >
+                加载更多
               </van-button>
             </div>
+          </template>
+          <div v-else class="empty-state">
+            <van-empty description="暂无消息" />
           </div>
-        </div>
-      </template>
-      
-      <!-- 空状态 -->
-      <div v-else class="empty-state">
-        <van-empty description="暂无消息" />
-      </div>
-    </div>
-
-    <!-- 加载更多 -->
-    <div v-if="hasMore" class="load-more">
-      <van-button plain block @click="loadMore">加载更多</van-button>
+        </van-list>
+      </van-pull-refresh>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { formatDistance } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
+import { getConversations } from '@/api/messages'
+import { formatTime } from '@/utils/format'
+import { getUserInfo } from '@/api/user'
 
 const router = useRouter()
+const route = useRoute()
 const currentTab = ref('all')
 const messages = ref([])
 const hasMore = ref(true)
-const page = ref(1)
-const pageSize = ref(10)
+const page = ref(0)
+const pageSize = 20
+const currentChatId = ref(null)
+const loading = ref(false)
+const finished = ref(false)
+const refreshing = ref(false)
+const conversations = ref([])
+const companyInfoMap = ref(new Map()) // 存储企业信息的Map
 
 // 消息类型标签
 const tabs = [
@@ -73,11 +105,32 @@ const tabs = [
   { name: '投递反馈', type: 'job', unread: 3 },
 ]
 
+// 带有企业信息的会话列表
+const conversationsWithInfo = computed(() => {
+  return conversations.value.map(conv => ({
+    ...conv,
+    companyInfo: companyInfoMap.value.get(conv.companyId)
+  }))
+})
+
 // 切换消息类型
 const handleTabChange = (type) => {
   currentTab.value = type
-  page.value = 1
-  fetchMessages()
+  // 重置列表状态
+  page.value = 0
+  conversations.value = []
+  finished.value = false
+  loading.value = false
+  companyInfoMap.value.clear()
+  
+  // 如果是系统通知，直接设置完成状态
+  if (type === 'system') {
+    finished.value = true
+    return
+  }
+  
+  // 重新加载数据
+  fetchConversations()
 }
 
 // 获取消息图标
@@ -102,14 +155,6 @@ const getMessageColor = (type) => {
     default:
       return '#666'
   }
-}
-
-// 格式化时间
-const formatTime = (time) => {
-  return formatDistance(new Date(time), new Date(), {
-    addSuffix: true,
-    locale: zhCN
-  })
 }
 
 // 处理消息点击
@@ -137,51 +182,127 @@ const markAsRead = async (messageId) => {
   }
 }
 
-// 获取消息列表
-const fetchMessages = async () => {
+// 获取企业信息
+const fetchCompanyInfo = async (companyId) => {
   try {
-    // TODO: 替换为实际的 API 调用
-    const mockMessages = [
-      {
-        id: 1,
-        type: 'system',
-        title: '简历被查看通知',
-        content: '您的简历已被XX公司查看',
-        createTime: '2024-01-20T10:00:00',
-        isRead: false
-      },
-      {
-        id: 2,
-        type: 'job',
-        title: '面试通知',
-        content: '恭喜您通过简历筛选，请准时参加面试',
-        createTime: '2024-01-19T15:30:00',
-        isRead: true,
-        jobId: 123
-      }
-    ]
-    
-    if (page.value === 1) {
-      messages.value = mockMessages
-    } else {
-      messages.value.push(...mockMessages)
+    const res = await getUserInfo(companyId)
+    if (res.code === 200) {
+      companyInfoMap.value.set(companyId, res.data)
     }
-    
-    hasMore.value = mockMessages.length === pageSize.value
   } catch (error) {
-    console.error('获取消息列表失败:', error)
+    console.error('获取企业信息失败:', error)
   }
 }
 
+// 获取会话列表
+const fetchConversations = async () => {
+  try {
+    const res = await getConversations({
+      page: page.value,
+      size: pageSize,
+      type: currentTab.value // 添加类型参数
+    })
+    
+    const newConversations = res.data.content || []
+    
+    // 获取所有新会话中的企业信息
+    await Promise.all(
+      newConversations.map(conv => fetchCompanyInfo(conv.companyId))
+    )
+    
+    if (refreshing.value) {
+      conversations.value = newConversations
+      refreshing.value = false
+    } else {
+      conversations.value = [...conversations.value, ...newConversations]
+    }
+    
+    loading.value = false
+    if (newConversations.length < pageSize) {
+      finished.value = true
+    }
+  } catch (error) {
+    console.error('获取会话列表失败:', error)
+    loading.value = false
+    finished.value = true
+  }
+}
+
+// 下拉刷新
+const onRefresh = () => {
+  finished.value = false
+  page.value = 0
+  fetchConversations()
+}
+
 // 加载更多
-const loadMore = () => {
-  page.value += 1
-  fetchMessages()
+const onLoad = () => {
+  if (!loading.value) {
+    page.value++
+    fetchConversations()
+  }
+}
+
+// 跳转到聊天页面
+const goToChat = (conversation) => {
+  const companyInfo = companyInfoMap.value.get(conversation.companyId)
+  router.push({
+    path: `/chat/${conversation.id}`,
+    query: {
+      companyName: companyInfo?.username,
+      companyLogo: companyInfo?.avatar
+    }
+  })
+}
+
+// 加载更多
+const loadMore = async () => {
+  if (loading.value) return
+  
+  loading.value = true
+  page.value++
+  
+  try {
+    const res = await getConversations({
+      page: page.value,
+      size: pageSize,
+      type: currentTab.value
+    })
+    
+    const newConversations = res.data.content || []
+    
+    // 获取所有新会话中的企业信息
+    await Promise.all(
+      newConversations.map(conv => fetchCompanyInfo(conv.companyId))
+    )
+    
+    conversations.value = [...conversations.value, ...newConversations]
+    
+    if (newConversations.length < pageSize) {
+      finished.value = true
+    }
+  } catch (error) {
+    console.error('加载更多消息失败:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
-  fetchMessages()
+  fetchConversations()
+  // 如果URL中有chatId参数,则打开对应的聊天
+  const chatId = route.query.chatId
+  if (chatId) {
+    currentChatId.value = chatId
+    // 可以在这里触发打开聊天窗口的逻辑
+    openChat(chatId)
+  }
 })
+
+const openChat = (chatId) => {
+  // 打开聊天窗口的具体实现
+  // ...
+}
 </script>
 
 <style scoped>
@@ -254,64 +375,127 @@ onMounted(() => {
 
 .message-item {
   display: flex;
-  gap: 16px;
-  padding: 20px;
-  border-radius: 8px;
-  background: #fafafa;
+  align-items: center;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
   cursor: pointer;
-  transition: all 0.3s;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f0f0;
 }
 
 .message-item:hover {
-  background: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary-color);
 }
 
-.message-item.unread {
-  background: #e6f7ff;
+.avatar {
+  position: relative;
+  margin-right: 16px;
+  flex-shrink: 0;
 }
 
-.message-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 20px;
-  background: white;
+.online-status {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #52c41a;
+  border: 2px solid #fff;
+  border-radius: 50%;
 }
 
-.message-content {
+.content {
   flex: 1;
+  min-width: 0; /* 防止文本溢出 */
 }
 
-.message-header {
+.header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.message-title {
+.company-name {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: #333;
+  margin-right: 8px;
 }
 
-.message-time {
-  font-size: 14px;
+.time {
+  font-size: 12px;
   color: #999;
+  flex-shrink: 0;
 }
 
-.message-body {
+.message-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-text {
   font-size: 14px;
   color: #666;
-  margin-bottom: 12px;
-  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80%;
 }
 
-.message-actions {
+.unread-count {
+  background: var(--primary-color);
+  color: white;
+  font-size: 12px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
   display: flex;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+/* 添加动画效果 */
+.message-item {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .message-item {
+    padding: 12px;
+  }
+
+  .avatar {
+    margin-right: 12px;
+  }
+
+  .company-name {
+    font-size: 15px;
+  }
+
+  .preview-text {
+    font-size: 13px;
+  }
 }
 
 .empty-state {
@@ -321,23 +505,38 @@ onMounted(() => {
 
 .load-more {
   margin-top: 20px;
-  text-align: center;
+  padding: 0 16px;
 }
 
-@media (max-width: 768px) {
-  .message-tabs {
-    overflow-x: auto;
-    padding-bottom: 12px;
-  }
+.load-more .van-button {
+  height: 40px;
+  font-size: 14px;
+  border-radius: 20px;
+  background: #fff;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
 
-  .message-item {
-    padding: 15px;
-  }
+.load-more .van-button:active {
+  opacity: 0.8;
+}
 
-  .message-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
+.load-more .van-button.van-button--loading {
+  opacity: 0.8;
+  background: #f5f5f5;
+}
+
+/* 添加加载动画 */
+@keyframes loading-rotate {
+  from {
+    transform: rotate(0deg);
   }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.van-button__loading {
+  animation: loading-rotate 1s linear infinite;
 }
 </style> 

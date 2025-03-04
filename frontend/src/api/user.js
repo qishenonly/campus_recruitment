@@ -14,3 +14,16 @@ export function getUserProfile() {
     method: 'get'
   })
 } 
+
+export function getUserInfo(id) {
+  return request({
+    url: `/users/${id}`,
+    method: 'get'
+  })
+}
+
+export default {
+  updateUserProfile,
+  getUserProfile,
+  getUserInfo
+}

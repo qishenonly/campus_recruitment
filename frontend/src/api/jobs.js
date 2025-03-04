@@ -66,6 +66,26 @@ export function getFavorites() {
   })
 }
 
+// 投递职位
+export function applyJob(jobId, resumeId, coverLetter) {
+  return request({
+    url: `/jobs/${jobId}/apply`,
+    method: 'post',
+    data: {
+      resumeId,
+      coverLetter
+    }
+  })
+}
+
+// 获取对话消息
+export function getConversationMessages(conversationId) {
+  return request({
+    url: `/conversations/${conversationId}/messages`,
+    method: 'get'
+  })
+}
+
 // 确保导出所有需要的函数
 export default {
   getJobs,
@@ -75,5 +95,7 @@ export default {
   favoriteJob,
   unfavoriteJob,
   getFavoriteStatus,
-  getFavorites
+  getFavorites,
+  applyJob,
+  getConversationMessages
 }

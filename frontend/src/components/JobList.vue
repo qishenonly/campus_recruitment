@@ -12,6 +12,11 @@
           <span class="tag">{{ job.positionType }}</span>
           <span class="tag">{{ job.majorRequirement }}</span>
         </div>
+        <div class="publisher-info">
+          <span class="publisher-name">{{ job.publisherName }}</span>
+          <span class="publisher-position">{{ job.publisherPosition }}</span>
+          <span class="publish-time">{{ formatPublishTime(job.publishTime) }}</span>
+        </div>
         <div class="bottom-row">
           <div class="company-info">
             <img :src="job.companyLogo" class="company-logo" alt="公司logo" />
@@ -50,7 +55,9 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { favoriteJob, unfavoriteJob } from '@/api/jobs'
+import { favoriteJob, unfavoriteJob, applyJob } from '@/api/jobs'
+import { format } from 'date-fns'
+import { sendMessageAPI } from '@/api/messages'
 
 const router = useRouter()
 const props = defineProps({
@@ -68,12 +75,24 @@ const goToJobDetail = (id) => {
 // 投递简历
 const handleApply = async (jobId) => {
   try {
-    // TODO: 调用投递简历 API
-    showToast('投递成功')
+    // 获取简历 ID (假设已经上传了简历)
+    const resumeId = localStorage.getItem('resumeId')
+    if (!resumeId) {
+      showToast('请先上传简历')
+      return
+    }
+
+    // 投递简历
+    const res = await applyJob(jobId, resumeId)
+    
+    if (res.code === 200) {
+      showToast('投递成功')
+    
+    }
   } catch (error) {
+    console.error('投递失败:', error)
     showToast('投递失败')
   }
-
 }
 
 const handleFavorite = async (job) => {
@@ -97,6 +116,12 @@ const handleFavorite = async (job) => {
     console.error('收藏操作失败:', error)
     showToast(error.message || '操作失败')
   }
+}
+
+// 格式化发布时间
+const formatPublishTime = (time) => {
+  if (!time) return ''
+  return format(new Date(time), 'yyyy-MM-dd')
 }
 </script>
 
@@ -227,5 +252,27 @@ const handleFavorite = async (job) => {
 
 .apply-btn {
   flex-shrink: 0;
+}
+
+/* 发布者信息样式 */
+.publisher-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.publisher-name {
+  color: var(--primary-color);
+}
+
+.publisher-position {
+  color: #666;
+}
+
+.publish-time {
+  color: #999;
 }
 </style>

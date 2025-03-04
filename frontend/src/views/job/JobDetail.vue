@@ -27,6 +27,10 @@
           </div>
         </div>
       </div>
+      <div class="publisher-info">
+        <span class="publisher-name">{{ jobInfo.publisherName }}</span>
+        <span class="publisher-position">{{ jobInfo.publisherPosition }}</span>
+      </div>
     </div>
 
     <!-- 职位操作按钮 -->
@@ -76,6 +80,17 @@
       <h2 class="section-title">相似职位</h2>
       <job-list :jobs="similarJobs" />
     </div>
+
+    <!-- 添加投递按钮 -->
+    <div class="action-bar">
+      <el-button 
+        type="primary" 
+        :loading="applying"
+        @click="handleApply"
+      >
+        投递简历
+      </el-button>
+    </div>
   </div>
   <div v-else class="loading-wrapper">
     <van-loading type="spinner" />
@@ -88,12 +103,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { getJobDetail, favoriteJob, unfavoriteJob, getFavoriteStatus } from '@/api/jobs'
 import JobList from '@/components/JobList.vue'
-
+import { ElMessage } from 'element-plus'
+import { applyJob } from '@/api/jobs'
+import { getResume } from '@/api/resume'
+import { sendMessageAPI } from '@/api/messages'
 const route = useRoute()
 const router = useRouter()
 const jobInfo = ref(null)
 const similarJobs = ref([])
 const isCollected = ref(false)
+const applying = ref(false)
 
 const formatRequirements = computed(() => {
   if (!jobInfo.value?.requirements) return ''
@@ -129,11 +148,63 @@ const fetchSimilarJobs = async () => {
   }
 }
 
+// 从路由参数中获取职位ID
+const jobId = computed(() => route.params.id)
+
+// 添加简历相关的状态
+const selectedResume = ref(null)
+const coverLetter = ref("您好，我对贵公司的职位很感兴趣，已投递简历，期待您的回复。") // 默认求职信
+
 const handleApply = async () => {
   try {
-    showToast('投递成功')
+    applying.value = true
+    const resumeRes = await getResume()
+    if (!resumeRes.data) {
+      ElMessage.warning('请先上传简历')
+      router.push('/resume')
+      return
+    }
+
+    // 投递简历
+    const res = await applyJob(jobId.value, resumeRes.data.id, coverLetter.value)
+
+    if (res.code === 200) {
+      // 获取会话 ID
+      const conversationId = res.data.conversationId
+      
+      // 发送带简历链接的消息
+      await sendMessageAPI(conversationId, {
+        content: '这是我的简历，您可以查看',
+        type: 'resume',
+        resumeId: resumeRes.data.id
+      })
+      
+      showToast({
+        message: '投递成功',
+        type: 'success'
+      })
+
+      // 跳转到聊天页面
+      router.push({
+        name: 'chat',
+        params: {
+          chatId: res.data.conversation.id
+        },
+        query: {
+          companyId: res.data.companyId,
+          companyName: res.data.companyName,
+          companyLogo: jobInfo.value.companyLogo
+        }
+      })
+    }
   } catch (error) {
-    showToast('投递失败')
+    console.error('投递失败:', error)
+    showToast({
+      message: error.message || '投递失败',
+      type: 'fail'
+    })
+  } finally {
+    applying.value = false
   }
 }
 
@@ -345,6 +416,39 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   min-height: 400px;
+}
+
+.action-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px;
+  background: white;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  z-index: 10;
+}
+
+.publisher-info {
+  margin: 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.publisher-name {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.publisher-position {
+  color: #666;
+}
+
+.publish-time {
+  color: #999;
 }
 
 @media (max-width: 768px) {

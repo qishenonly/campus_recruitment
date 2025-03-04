@@ -83,6 +83,12 @@ const routes = [
         name: 'favorites',
         component: () => import('../views/mine/Favorites.vue'),
         meta: { title: '我的收藏' }
+      },
+      {
+        path: 'chat/:chatId',
+        name: 'chat',
+        component: () => import('../views/message/Chat.vue'),
+        meta: { title: '聊天' }
       }
     ]
   }

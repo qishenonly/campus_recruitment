@@ -174,7 +174,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUserProfile } from '@/api/user'
+import { getUserProfile, getUserInfo } from '@/api/user'
 import { getFavorites } from '@/api/jobs'
 import { useDialogStore } from '@/stores/dialog'
 import {
@@ -201,19 +201,49 @@ const dialogStore = useDialogStore()
 const deliveryCount = ref(0)
 const favoriteCount = ref(0)
 
-onMounted(async () => {
+// 获取用户信息的方法
+const getUserInfos = async () => {
   try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    if (!userInfo.token) {
+      router.push('/login')
+      return
+    }
+    // 获取用户详细信息
     const res = await getUserProfile()
-    userProfile.value = res.data
+    if (res.code === 200 && res.data) {
+      userProfile.value = {
+        ...res.data,
+        user: userInfo // 合并本地存储的用户基本信息
+      }
+    }
   } catch (error) {
-    console.error('获取用户资料失败:', error)
+    console.error('获取用户信息失败:', error)
   }
+}
 
+onMounted(async () => {
+  // 获取用户基本信息
+  await getUserInfos()
+
+  // 获取收藏数量
   try {
     const res = await getFavorites()
-    favoriteCount.value = res.data.totalElements
+    if (res.code === 200) {
+      favoriteCount.value = res.data.totalElements
+    }
   } catch (error) {
     console.error('获取收藏数量失败:', error)
+  }
+
+  // 获取投递记录数量
+  try {
+    const res = await getDeliveryRecords()
+    if (res.code === 200) {
+      deliveryCount.value = res.data.totalElements
+    }
+  } catch (error) {
+    console.error('获取投递记录数量失败:', error)
   }
 })
 
@@ -235,25 +265,6 @@ const handleFavorites = () => {
 
 const handleSettings = () => {
   router.push('/settings')
-}
-
-// 获取用户信息的方法
-const getUserInfo = async () => {
-  try {
-    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-    if (!userInfo.token) {
-      router.push('/login')
-      return
-    }
-    // 重新获取最新的用户信息
-    const res = await getUserProfile()
-    if (res.data) {
-      // 更新用户信息
-      userProfile.value = res.data
-    }
-  } catch (error) {
-    console.error('获取用户信息失败:', error)
-  }
 }
 </script>
 
