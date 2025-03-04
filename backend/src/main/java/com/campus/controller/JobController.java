@@ -3,6 +3,8 @@ package com.campus.controller;
 import com.campus.model.Job;
 import com.campus.service.JobService;
 import com.campus.dto.JobDTO;
+import com.campus.util.JwtUtil;
+import com.campus.service.CompanyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,12 +43,6 @@ public class JobController {
             Pageable pageable) {
         return ResponseEntity.ok(jobService.searchWithCompany(
             keyword, location, education, positionType, salary, pageable));
-    }
-
-    // 发布新职位
-    @PostMapping
-    public ResponseEntity<Job> createJob(@RequestBody Job job) {
-        return ResponseEntity.ok(jobService.save(job));
     }
 
     // 更新职位信息

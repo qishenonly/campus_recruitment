@@ -1,7 +1,9 @@
 package com.campus.controller;
 
 import com.campus.model.Student;
+import com.campus.model.User;
 import com.campus.service.StudentService;
+import com.campus.service.UserService;
 import com.campus.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,43 +15,60 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api")
+@CrossOrigin
 public class UserController {
 
     @Autowired
     private StudentService studentService;
 
-    @GetMapping("/profile")
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/user/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
         try {
-            // 从token中获取用户ID
             String jwtToken = token.replace("Bearer ", "");
             Long userId = JwtUtil.getUserIdFromToken(jwtToken);
             
             // 获取学生信息
-            Optional<Student> studentOpt = studentService.findByUserId(userId);
+            Student student = studentService.findByUserId(userId)
+                    .orElseGet(() -> {
+                        // 如果不存在，返回一个空的Student对象
+                        Student newStudent = new Student();
+                        newStudent.setId(userId);
+                        return newStudent;
+                    });
+
+            User user = userService.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("用户不存在"));
             
-            if (studentOpt.isEmpty()) {
-                // 如果还没有创建资料，返回空数据
-                Map<String, Object> response = new HashMap<>();
-                response.put("code", 200);
-                response.put("message", "success");
-                response.put("data", null);
-                return ResponseEntity.ok(response);
-            }
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("id", student.getId());
+            userInfo.put("realName", student.getRealName());
+            userInfo.put("avatar", user.getAvatar());
+            userInfo.put("university", student.getUniversity());
+            userInfo.put("major", student.getMajor());
+            userInfo.put("education", student.getEducation());
+            userInfo.put("graduationYear", student.getGraduationYear());
+            userInfo.put("gender", student.getGender());
+            userInfo.put("birth", student.getBirth());
+            userInfo.put("location", student.getLocation());
+            userInfo.put("expectedPosition", student.getExpectedPosition());
+            userInfo.put("expectedSalary", student.getExpectedSalary());
+            userInfo.put("expectedCity", student.getExpectedCity());
             
             Map<String, Object> response = new HashMap<>();
             response.put("code", 200);
             response.put("message", "success");
-            response.put("data", studentOpt.get());
+            response.put("data", userInfo);
             
             return ResponseEntity.ok(response);
-            
         } catch (Exception e) {
-            Map<String, Object> response = new HashMap<>();
-            response.put("code", 500);
-            response.put("message", "获取资料失败：" + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", 500);
+            error.put("message", "获取个人资料失败：" + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
         }
     }
 
@@ -93,6 +112,31 @@ public class UserController {
             response.put("code", 500);
             response.put("message", "更新失败：" + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<?> getUserInfo(@PathVariable Long userId) {
+        try {
+            User user = userService.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("用户不存在"));
+            
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("id", user.getId());
+            userInfo.put("username", user.getUsername());
+            userInfo.put("role", user.getRole());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "success");
+            response.put("data", userInfo);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("code", 500);
+            error.put("message", "获取用户信息失败：" + e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
         }
     }
 } 

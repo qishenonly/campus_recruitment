@@ -28,4 +28,9 @@ public class JobDTO {
     private String companyLogo;
     private String companyScale;
     private Boolean companyVerified;
+    
+    // 添加发布者信息
+    private Long publisherId;  // 发布这个职位的企业员工ID
+    private String publisherName;  // 发布者姓名
+    private String publisherPosition;  // 发布者职位
 } 

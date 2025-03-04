@@ -54,6 +54,9 @@ CREATE TABLE companies (
 CREATE TABLE jobs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     company_id BIGINT NOT NULL,
+    publisher_id BIGINT NOT NULL,  -- 已有：发布者ID
+    publisher_name VARCHAR(50),     -- 新增：发布者姓名
+    publisher_position VARCHAR(50), -- 新增：发布者职位
     title VARCHAR(100) NOT NULL,
     description TEXT NOT NULL,
     requirements TEXT,
@@ -67,8 +70,10 @@ CREATE TABLE jobs (
     status ENUM('DRAFT', 'PUBLISHED', 'CLOSED', 'DELETED') NOT NULL DEFAULT 'PUBLISHED',
     view_count INT DEFAULT 0,
     apply_count INT DEFAULT 0,
-    FOREIGN KEY (company_id) REFERENCES companies(id)
+    FOREIGN KEY (company_id) REFERENCES companies(id),
+    FOREIGN KEY (publisher_id) REFERENCES users(id)
 );
+
 
 -- 简历表
 CREATE TABLE resumes (
@@ -82,6 +87,7 @@ CREATE TABLE resumes (
     awards TEXT,
     self_evaluation TEXT,
     attachment_url VARCHAR(200),
+    content TEXT,
     create_time DATETIME NOT NULL,
     update_time DATETIME NOT NULL,
     FOREIGN KEY (student_id) REFERENCES students(id)
@@ -116,6 +122,22 @@ CREATE TABLE notifications (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+-- 职位申请表
+CREATE TABLE job_applications (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    student_id BIGINT NOT NULL,
+    job_id BIGINT NOT NULL,
+    resume_id BIGINT NOT NULL,
+    cover_letter TEXT,
+    status ENUM('PENDING', 'REVIEWING', 'ACCEPTED', 'REJECTED', 'WITHDRAWN') NOT NULL DEFAULT 'PENDING',
+    create_time DATETIME NOT NULL,
+    update_time DATETIME NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES students(id),
+    FOREIGN KEY (job_id) REFERENCES jobs(id),
+    FOREIGN KEY (resume_id) REFERENCES resumes(id),
+    UNIQUE KEY `uk_student_job` (`student_id`, `job_id`)  -- 防止重复投递
+);
+
 -- 对话表
 CREATE TABLE conversations (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -125,9 +147,9 @@ CREATE TABLE conversations (
     status ENUM('ACTIVE', 'CLOSED') NOT NULL DEFAULT 'ACTIVE',
     create_time DATETIME NOT NULL,
     update_time DATETIME NOT NULL,
-    FOREIGN KEY (application_id) REFERENCES applications(id),
+    FOREIGN KEY (application_id) REFERENCES job_applications(id),
     FOREIGN KEY (student_id) REFERENCES students(id),
-    FOREIGN KEY (company_id) REFERENCES companies(id)
+    FOREIGN KEY (company_id) REFERENCES users(id)
 );
 
 -- 消息表
@@ -136,7 +158,7 @@ CREATE TABLE messages (
     conversation_id BIGINT NOT NULL,
     sender_id BIGINT NOT NULL,
     content TEXT NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
     create_time DATETIME NOT NULL,
     FOREIGN KEY (conversation_id) REFERENCES conversations(id),
     FOREIGN KEY (sender_id) REFERENCES users(id)
@@ -178,11 +200,11 @@ INSERT INTO users (id, username, password, email, phone, role, create_time, upda
 (3,'student3', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'student3@university.edu', '13800138003', 'STUDENT', NOW(), NOW(), 'ACTIVE'),
 (4,'student4', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'student4@university.edu', '13800138004', 'STUDENT', NOW(), NOW(), 'ACTIVE'),
 (5,'student5', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'student5@university.edu', '13800138005', 'STUDENT', NOW(), NOW(), 'ACTIVE'),
-(6,'company1', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company1.com', '13800138002', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
-(7,'company2', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company2.com', '13800138003', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
-(8,'company3', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company3.com', '13800138004', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
-(9,'company4', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company4.com', '13800138005', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
-(10,'company5', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company5.com', '13800138006', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
+(6,'赵钱', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company1.com', '13800138002', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
+(7,'孙吴', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company2.com', '13800138003', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
+(8,'浅仓', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company3.com', '13800138004', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
+(9,'华青', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company4.com', '13800138005', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
+(10,'成汗', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'hr@company5.com', '13800138006', 'COMPANY', NOW(), NOW(), 'ACTIVE'),
 (11,'admin1', '$2a$10$xVWZxKFGZgRqf1sAhQWoUOYYok.KzX4hpWH5c3lxE6HxuVb3pbhPS', 'admin@system.com', '13800138003', 'ADMIN', NOW(), NOW(), 'ACTIVE');
 
 -- 2. 插入学生信息
@@ -196,19 +218,19 @@ INSERT INTO students (id, real_name, university, major, education, graduation_ye
 
 -- 3. 插入企业信息
 INSERT INTO companies (id, company_name, industry, scale, description, location, website, logo, verified, contact_person, contact_position) VALUES
-(1, '小米', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'http://www.company1.com', 'http://example.com/logo.png', TRUE, '李四', 'HR经理'),
-(2, '华为', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'http://www.company1.com', 'http://example.com/logo.png', TRUE, '李四', 'HR经理'),
-(3, '腾讯', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'http://www.company1.com', 'http://example.com/logo.png', TRUE, '李四', 'HR经理'),
-(4, '阿里巴巴', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'http://www.company1.com', 'http://example.com/logo.png', TRUE, '李四', 'HR经理'),
-(5, '字节跳动', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'http://www.company1.com', 'http://example.com/logo.png', TRUE, '李四', 'HR经理');
+(1, '小米', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'https://www.mi.com/', 'https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg', TRUE, '李四', 'HR经理'),
+(2, '华为', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'https://www.huawei.com/cn/', 'https://www.logobiaozhi.com/upLoad/image/20230909/16942489332742399.jpg', TRUE, '李四', 'HR经理'),
+(3, '腾讯', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'https://www.tencent.com/zh-cn/', 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuKyPBLu9Tc8WmHglxrEEgBxl2B0E3crBNIQ&s', TRUE, '李四', 'HR经理'),
+(4, '阿里巴巴', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'https://alibaba.com.cn/', 'https://logores.yrucd.com/wp-content/uploads/2023/01/Alibaba_logo_PNG2.png!a', TRUE, '李四', 'HR经理'),
+(5, '字节跳动', '互联网', '100-499人', '一家创新的科技公司', '北京市海淀区', 'https://www.bytedance.com/zh/', 'https://puui.qpic.cn/vpic_cover/v31474h4bpo/v31474h4bpo_hz.jpg', TRUE, '李四', 'HR经理');
 
 -- 4. 插入职位信息
-INSERT INTO jobs (company_id, title, description, requirements, salary, location, position_type, education_requirement, major_requirement, publish_date, deadline) VALUES
-(1, 'Java后端开发工程师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉Java编程\n3. 了解Spring框架', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
-(2, 'Python后端开发工程师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉Python编程\n3. 了解Django框架', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
-(3, '前端开发工程师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉Vue.js编程\n3. 了解React框架', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
-(4, 'UI设计师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉UI设计\n3. 了解Photoshop', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
-(5, '产品经理', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉产品经理', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY));
+INSERT INTO jobs (company_id, publisher_id, publisher_name, publisher_position, title, description, requirements, salary, location, position_type, education_requirement, major_requirement, publish_date, deadline) VALUES
+(1, 6, '赵钱', 'HR', 'Java后端开发工程师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉Java编程\n3. 了解Spring框架', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(2, 7, '孙吴', 'HRBP', 'Python后端开发工程师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉Python编程\n3. 了解Django框架', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(3, 8, '浅仓', 'HR', '前端开发工程师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉Vue.js编程\n3. 了解React框架', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(4, 9, '华青', 'HRBP', 'UI设计师', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉UI设计\n3. 了解Photoshop', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)),
+(5, 10, '成汗', 'HR', '产品经理', '负责公司核心系统开发', '1. 本科及以上学历\n2. 熟悉产品经理', '15k-25k', '北京', '全职', '本科', '计算机相关专业', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY));
 
 -- 5. 插入简历信息
 INSERT INTO resumes (student_id, name, education, experience, skills, projects, awards, self_evaluation, create_time, update_time) VALUES

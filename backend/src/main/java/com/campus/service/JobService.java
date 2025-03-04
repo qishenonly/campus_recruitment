@@ -2,8 +2,10 @@ package com.campus.service;
 
 import com.campus.model.Job;
 import com.campus.model.Company;
+import com.campus.model.User;
 import com.campus.repository.JobRepository;
 import com.campus.repository.CompanyRepository;
+import com.campus.repository.UserRepository;
 import com.campus.dto.JobDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,9 @@ public class JobService {
     
     @Autowired
     private CompanyRepository companyRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
     
     public Page<Job> findAll(Pageable pageable) {
         return jobRepository.findAll(pageable);
@@ -58,7 +63,10 @@ public class JobService {
     
     @Transactional
     public void incrementApplyCount(Long jobId) {
-        jobRepository.incrementApplyCount(jobId);
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("职位不存在"));
+        job.setApplyCount(job.getApplyCount() + 1);
+        jobRepository.save(job);
     }
     
     public void updateStatus(Long jobId, Job.JobStatus status) {
@@ -73,30 +81,51 @@ public class JobService {
         return jobRepository.findByCompanyId(companyId, pageable);
     }
 
-    private JobDTO convertToDTO(Job job) {
+    public JobDTO convertToDTO(Job job) {
         JobDTO dto = new JobDTO();
         BeanUtils.copyProperties(job, dto);
         
-        // 获取并设置公司信息
+        // 获取公司信息
         Company company = companyRepository.findById(job.getCompanyId())
-                .orElse(null);
-        if (company != null) {
-            dto.setCompanyName(company.getCompanyName());
-            dto.setIndustry(company.getIndustry());
-            dto.setCompanyLogo(company.getLogo());
-            dto.setCompanyScale(company.getScale());
-            dto.setCompanyVerified(company.getVerified());
-        }
+                .orElseThrow(() -> new RuntimeException("公司不存在"));
+        
+        dto.setCompanyName(company.getCompanyName());
+        dto.setIndustry(company.getIndustry());
+        dto.setCompanyLogo(company.getLogo());
+        dto.setCompanyScale(company.getScale());
+        dto.setCompanyVerified(company.getVerified());
+
+        // 获取发布者信息
+        User publisher = userRepository.findById(job.getPublisherId())
+                .orElseThrow(() -> new RuntimeException("发布者不存在"));
+        
+        dto.setPublisherId(publisher.getId());
+        dto.setPublisherName(job.getPublisherName());
+        dto.setPublisherPosition(job.getPublisherPosition());  // 从公司信息中获取职位
         
         return dto;
     }
 
     public Page<JobDTO> findAllWithCompany(Pageable pageable) {
-        return jobRepository.findAll(pageable).map(this::convertToDTO);
+        Page<Job> jobs = jobRepository.findAll(pageable);
+        return jobs.map(job -> convertToDTO(job));
     }
     
     public Optional<JobDTO> findByIdWithCompany(Long id) {
-        return jobRepository.findById(id).map(this::convertToDTO);
+        return jobRepository.findById(id)
+            .map(job -> {
+                JobDTO dto = convertToDTO(job);
+                Company company = companyRepository.findById(job.getCompanyId())
+                    .orElse(null);
+                if (company != null) {
+                    dto.setCompanyName(company.getCompanyName());
+                    dto.setIndustry(company.getIndustry());
+                    dto.setCompanyLogo(company.getLogo());
+                    dto.setCompanyScale(company.getScale());
+                    dto.setCompanyVerified(company.getVerified());
+                }
+                return dto;
+            });
     }
     
     public Page<JobDTO> searchWithCompany(String keyword, String location, 
@@ -116,5 +145,11 @@ public class JobService {
     
     public Page<JobDTO> findByCompanyIdWithCompany(Long companyId, Pageable pageable) {
         return jobRepository.findByCompanyId(companyId, pageable).map(this::convertToDTO);
+    }
+
+    public Long getCompanyIdByJobId(Long jobId) {
+        Job job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new RuntimeException("职位不存在"));
+        return job.getCompanyId();
     }
 } 

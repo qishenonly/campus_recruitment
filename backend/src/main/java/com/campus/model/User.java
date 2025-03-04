@@ -18,6 +18,12 @@ public class User {
     @Column(nullable = false)
     private String password;
     
+    @Column(name = "real_name")
+    private String realName;
+    
+    @Column(name = "avatar")
+    private String avatar;  // 头像URL
+    
     @Column(nullable = false, unique = true)
     private String email;
     
@@ -27,21 +33,25 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
     
-    @Column(nullable = false)
-    private LocalDateTime createTime;
-    
-    @Column(nullable = false)
-    private LocalDateTime updateTime;
-    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private UserStatus status = UserStatus.ACTIVE;
+    private UserStatus status;
+    
+    @Column(name = "create_time")
+    private LocalDateTime createTime;
+    
+    @Column(name = "update_time")
+    private LocalDateTime updateTime;
     
     public enum UserRole {
         STUDENT, COMPANY, ADMIN
     }
     
     public enum UserStatus {
-        ACTIVE, INACTIVE, BANNED
+        ACTIVE, INACTIVE, BLOCKED
+    }
+
+    public UserRole getRole() {
+        return role;
     }
 } 

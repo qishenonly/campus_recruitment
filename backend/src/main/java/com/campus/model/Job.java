@@ -52,6 +52,15 @@ public class Job {
     
     private Integer applyCount = 0;
     
+    @Column(nullable = false)
+    private Long publisherId;  // 发布者ID
+
+    @Column(nullable = false)
+    private String publisherName;  // 发布者名称
+
+    @Column(nullable = false)
+    private String publisherPosition;  // 发布者职位
+    
     public enum PositionType {
         全职, 实习, 兼职
     }
