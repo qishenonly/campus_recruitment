@@ -11,4 +11,5 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     Page<Conversation> findByStudentIdOrderByUpdateTimeDesc(Long studentId, Pageable pageable);
     Page<Conversation> findByCompanyIdOrderByUpdateTimeDesc(Long companyId, Pageable pageable);
     Page<Conversation> findByStudentIdOrCompanyId(Long studentId, Long companyId, Pageable pageable);
+    Page<Conversation> findByCompanyId(Long companyId, Pageable pageable);
 } 

@@ -84,4 +84,16 @@ public class ConversationService {
             conversationRepository.save(conversation);
         });
     }
+
+    public Page<Conversation> getCompanyConversations(Long companyId, Pageable pageable) {
+        return conversationRepository.findByCompanyId(companyId, pageable);
+    }
+
+    public Message getLastMessage(Long conversationId) {
+        return messageRepository.findFirstByConversationIdOrderByCreateTimeDesc(conversationId);
+    }
+
+    public long getUnreadMessageCount(Long conversationId, Long userId) {
+        return messageRepository.countByConversationIdAndSenderIdNotAndIsReadFalse(conversationId, userId);
+    }
 } 

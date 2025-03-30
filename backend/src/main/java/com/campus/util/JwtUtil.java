@@ -73,6 +73,16 @@ public class JwtUtil {
         }
     }
 
+    public static String getRoleFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(Keys.hmacShaKeyFor(SECRET_KEY.getBytes()))
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    
+        return claims.get("role").toString();
+    }
+    
     // 为了方便静态方法访问，添加静态密钥
     private static final String SECRET_KEY = "your-secret-key-should-be-very-long-and-secure-at-least-256-bits";
 } 

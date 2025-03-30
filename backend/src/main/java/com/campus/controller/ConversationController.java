@@ -35,11 +35,22 @@ public class ConversationController {
         try {
             String jwtToken = token.replace("Bearer ", "");
             Long userId = JwtUtil.getUserIdFromToken(jwtToken);
+            String role = JwtUtil.getRoleFromToken(jwtToken);
             
-            Page<Conversation> conversations = conversationService.getUserConversations(
-                userId, 
-                PageRequest.of(page, size)
-            );
+            Page<Conversation> conversations;
+            if (role.equals("STUDENT")) {
+                conversations = conversationService.getUserConversations(
+                    userId, 
+                    PageRequest.of(page, size)
+                );
+            } else if (role.equals("COMPANY")) {
+                conversations = conversationService.getCompanyConversations(
+                    userId,
+                    PageRequest.of(page, size)
+                );
+            } else {
+                throw new RuntimeException("无效的用户角色");
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("code", 200);
