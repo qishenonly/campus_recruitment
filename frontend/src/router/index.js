@@ -99,6 +99,36 @@ const routes = [
           requireAuth: true,
           roles: ['COMPANY'] 
         }
+      },
+      {
+        path: '/company/resume-management',
+        name: 'resumeManagement',
+        component: () => import('../views/company/ResumeManagement.vue'),
+        meta: { 
+          title: '简历管理',
+          requireAuth: true,
+          roles: ['COMPANY'] 
+        }
+      },
+      {
+        path: '/company/interview-management',
+        name: 'interviewManagement',
+        component: () => import('../views/company/InterviewManagement.vue'),
+        meta: { 
+          title: '面试管理',
+          requireAuth: true,
+          roles: ['COMPANY'] 
+        }
+      },
+      {
+        path: '/company/talent-pool',
+        name: 'talentPool',
+        component: () => import('../views/company/TalentPool.vue'),
+        meta: { 
+          title: '人才库',
+          requireAuth: true,
+          roles: ['COMPANY'] 
+        }
       }
     ]
   }
