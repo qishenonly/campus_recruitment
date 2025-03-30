@@ -28,7 +28,7 @@
         <!-- 快捷统计信息 -->
         <div class="quick-stats">
           <div class="stat-item">
-            <span class="number">12</span>
+            <span class="number">{{ deliveryCount }}</span>
             <span class="label">投递记录</span>
           </div>
           <div class="stat-item">
@@ -177,6 +177,7 @@ import { useRouter } from 'vue-router'
 import { getUserProfile, getUserInfo } from '@/api/user'
 import { getFavorites } from '@/api/jobs'
 import { useDialogStore } from '@/stores/dialog'
+import { getConversations } from '@/api/messages'
 import {
   Edit,
   User,
@@ -238,7 +239,11 @@ onMounted(async () => {
 
   // 获取投递记录数量
   try {
-    const res = await getDeliveryRecords()
+    const res = await getConversations({
+      page: 1,
+      size: 1000,
+      type: 'student'
+    })
     if (res.code === 200) {
       deliveryCount.value = res.data.totalElements
     }

@@ -30,7 +30,7 @@
       <div class="menu-section">
         <div class="section-title">招聘管理</div>
         <div class="menu-grid">
-          <div class="menu-item" @click="router.push('/company/jobs')">
+          <div class="menu-item" @click="router.push('/company/job-management')">
             <van-icon name="notes-o" class="menu-icon" />
             <span>职位管理</span>
           </div>

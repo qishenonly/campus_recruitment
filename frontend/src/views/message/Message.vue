@@ -2,8 +2,8 @@
   <div class="message-page">
     <!-- 消息类型切换 -->
     <div class="message-tabs">
-      <div 
-        v-for="tab in tabs" 
+      <div
+        v-for="tab in tabs"
         :key="tab.type"
         :class="['tab-item', { active: currentTab === tab.type }]"
         @click="handleTabChange(tab.type)"
@@ -23,8 +23,8 @@
           @load="onLoad"
         >
           <template v-if="conversations.length > 0">
-            <div 
-              v-for="conversation in conversationsWithInfo" 
+            <div
+              v-for="conversation in conversationsWithInfo"
               :key="conversation.id"
               class="message-item"
               @click="goToChat(conversation)"
@@ -34,14 +34,14 @@
                   round
                   width="50"
                   height="50"
-                  :src="conversation.companyInfo?.avatar || '/default-avatar.png'"
+                  :src="conversation.userInfo?.avatar || '/default-avatar.png'"
                   fit="cover"
                 />
                 <div class="online-status"></div>
               </div>
               <div class="content">
                 <div class="header">
-                  <span class="company-name">{{ conversation.companyInfo?.username || '未知企业' }}</span>
+                  <span class="company-name">{{ conversation.userInfo?.username || '未知用户' }}</span>
                   <span class="time">{{ formatTime(conversation.createTime) }}</span>
                 </div>
                 <div class="message-preview">
@@ -52,12 +52,12 @@
                 </div>
               </div>
             </div>
-            
+
             <!-- 加载更多按钮 -->
             <div v-if="!finished && !loading" class="load-more">
-              <van-button 
-                plain 
-                block 
+              <van-button
+                plain
+                block
                 :loading="loading"
                 loading-text="加载中..."
                 @click="loadMore"
@@ -96,7 +96,8 @@ const loading = ref(false)
 const finished = ref(false)
 const refreshing = ref(false)
 const conversations = ref([])
-const companyInfoMap = ref(new Map()) // 存储企业信息的Map
+const userInfoMap = ref(new Map()) // 存储用户信息的Map
+const userRole = localStorage.getItem('userInfo') ? JSON.parse(localStorage.getItem('userInfo')).role : null;
 
 // 消息类型标签
 const tabs = [
@@ -105,11 +106,11 @@ const tabs = [
   { name: '投递反馈', type: 'job', unread: 3 },
 ]
 
-// 带有企业信息的会话列表
+// 带有用户信息的会话列表
 const conversationsWithInfo = computed(() => {
   return conversations.value.map(conv => ({
     ...conv,
-    companyInfo: companyInfoMap.value.get(conv.companyId)
+    userInfo: userInfoMap.value.get(conv.userId), // 使用 userId 作为键来获取用户信息
   }))
 })
 
@@ -121,7 +122,7 @@ const handleTabChange = (type) => {
   conversations.value = []
   finished.value = false
   loading.value = false
-  companyInfoMap.value.clear()
+  userInfoMap.value.clear()
   
   // 如果是系统通知，直接设置完成状态
   if (type === 'system') {
@@ -182,15 +183,15 @@ const markAsRead = async (messageId) => {
   }
 }
 
-// 获取企业信息
-const fetchCompanyInfo = async (companyId) => {
+// 获取用户信息
+const fetchUserInfo = async (id) => {
   try {
-    const res = await getUserInfo(companyId)
+    const res = await getUserInfo(id)
     if (res.code === 200) {
-      companyInfoMap.value.set(companyId, res.data)
+      userInfoMap.value.set(id, res.data)
     }
   } catch (error) {
-    console.error('获取企业信息失败:', error)
+    console.error('获取用户信息失败:', error)
   }
 }
 
@@ -202,21 +203,33 @@ const fetchConversations = async () => {
       size: pageSize,
       type: currentTab.value // 添加类型参数
     })
-    
+
     const newConversations = res.data.content || []
-    
-    // 获取所有新会话中的企业信息
+    for (const conv of newConversations) {
+      // 根据当前用户的角色判断需要获取 studentId 还是 companyId
+      if (userRole === 'STUDENT') {
+        conv.userId = conv.companyId;
+      } else if (userRole === 'COMPANY') {
+        conv.userId = conv.studentId;
+      }
+    }
+
+    // 获取所有新会话中的用户信息
     await Promise.all(
-      newConversations.map(conv => fetchCompanyInfo(conv.companyId))
+      newConversations.map(conv => {
+        if(conv.userId){
+          fetchUserInfo(conv.userId)
+        }
+      })
     )
-    
+
     if (refreshing.value) {
       conversations.value = newConversations
       refreshing.value = false
     } else {
       conversations.value = [...conversations.value, ...newConversations]
     }
-    
+
     loading.value = false
     if (newConversations.length < pageSize) {
       finished.value = true
@@ -245,12 +258,12 @@ const onLoad = () => {
 
 // 跳转到聊天页面
 const goToChat = (conversation) => {
-  const companyInfo = companyInfoMap.value.get(conversation.companyId)
+  const userInfo = userInfoMap.value.get(conversation.userId)
   router.push({
     path: `/chat/${conversation.id}`,
     query: {
-      companyName: companyInfo?.username,
-      companyLogo: companyInfo?.avatar
+      companyName: userInfo?.username,
+      companyLogo: userInfo?.avatar
     }
   })
 }
@@ -258,26 +271,37 @@ const goToChat = (conversation) => {
 // 加载更多
 const loadMore = async () => {
   if (loading.value) return
-  
+
   loading.value = true
   page.value++
-  
+
   try {
     const res = await getConversations({
       page: page.value,
       size: pageSize,
       type: currentTab.value
     })
-    
+
     const newConversations = res.data.content || []
-    
-    // 获取所有新会话中的企业信息
+    for (const conv of newConversations) {
+      // 根据当前用户的角色判断需要获取 studentId 还是 companyId
+      if (userRole === 'STUDENT') {
+        conv.userId = conv.companyId;
+      } else if (userRole === 'COMPANY') {
+        conv.userId = conv.studentId;
+      }
+    }
+    // 获取所有新会话中的用户信息
     await Promise.all(
-      newConversations.map(conv => fetchCompanyInfo(conv.companyId))
+      newConversations.map(conv => {
+        if(conv.userId){
+          fetchUserInfo(conv.userId)
+        }
+      })
     )
-    
+
     conversations.value = [...conversations.value, ...newConversations]
-    
+
     if (newConversations.length < pageSize) {
       finished.value = true
     }
@@ -306,6 +330,7 @@ const openChat = (chatId) => {
 </script>
 
 <style scoped>
+/* ... (rest of your styles remain the same) ... */
 .message-page {
   background: white;
   border-radius: 8px;
@@ -539,4 +564,4 @@ const openChat = (chatId) => {
 .van-button__loading {
   animation: loading-rotate 1s linear infinite;
 }
-</style> 
+</style>

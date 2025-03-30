@@ -89,6 +89,16 @@ const routes = [
         name: 'chat',
         component: () => import('../views/message/Chat.vue'),
         meta: { title: '聊天' }
+      },
+      {
+        path: '/company/job-management',
+        name: 'jobManagement',
+        component: () => import('../views/company/JobManagement.vue'),
+        meta: { 
+          title: '职位管理',
+          requireAuth: true,
+          roles: ['COMPANY'] 
+        }
       }
     ]
   }
