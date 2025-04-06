@@ -33,6 +33,14 @@ nb-configuration.xml
 *.log
 logs/
 
+# 忽略临时文件
+*.tmp
+*.temp
+*.tmp.*
+*.temp.*
+*.lock
+*.pdf
+
 # 忽略依赖管理工具的缓存目录
 .m2/
 .gradle/

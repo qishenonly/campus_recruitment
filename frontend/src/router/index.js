@@ -131,6 +131,35 @@ const routes = [
           requireAuth: true,
           roles: ['COMPANY'] 
         }
+      },
+      {
+        path: '/company/profile',
+        name: 'companyInfo',
+        component: () => import('../views/company/CompanyInfo.vue'),
+        meta: { 
+          title: '企业信息',
+          requireAuth: true,
+          roles: ['COMPANY'] 
+        }
+      },
+      {
+        path: '/company/team',
+        name: 'teamManagement',
+        component: () => import('../views/company/TeamManagement.vue'),
+        meta: { 
+          title: '团队管理',
+          requireAuth: true,
+          roles: ['COMPANY'] 
+        }
+      },
+      {
+        path: '/company/settings',
+        name: 'accountSettings',
+        component: () => import('../views/mine/AccountSettings.vue'),
+        meta: { 
+          title: '账号设置',
+          requireAuth: true
+        }
       }
     ]
   }

@@ -42,10 +42,6 @@
             <van-icon name="clock-o" class="menu-icon" />
             <span>面试管理</span>
           </div>
-          <div class="menu-item" @click="router.push('/company/talent-pool')">
-            <van-icon name="friends-o" class="menu-icon" />
-            <span>人才库</span>
-          </div>
         </div>
       </div>
 

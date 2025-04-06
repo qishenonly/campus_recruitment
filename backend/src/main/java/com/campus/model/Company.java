@@ -2,6 +2,7 @@ package com.campus.model;
 
 import lombok.Data;
 import javax.persistence.*;
+import java.util.List;
 
 @Data
 @Entity
@@ -21,7 +22,8 @@ public class Company {
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    private String location;
+    private String city; // 城市
+    private String address; // 详细地址
     
     private String website;
     
@@ -35,8 +37,13 @@ public class Company {
     
     private String contactPosition;
     
+    private String financingStage; // 融资阶段
+
     @OneToOne
     @MapsId
     @JoinColumn(name = "id")
     private User user;
+    
+    @Transient
+    private List<TeamMember> teamMembers;
 } 
