@@ -3,7 +3,7 @@ import request from '@/utils/request'
 // 获取企业发布的职位列表
 export function getCompanyPublishedJobs(params) {
   return request({
-    url: '/jobs',
+    url: '/company/employee/jobs',
     method: 'get',
     params
   })
@@ -21,7 +21,7 @@ export function createJob(data) {
 // 更新职位信息
 export function updateJob(jobId, data) {
   return request({
-    url: `/jobs/${jobId}`,
+    url: `/company/employee/jobs/${jobId}`,
     method: 'put',
     data
   })
@@ -46,7 +46,7 @@ export function getJobDetail(jobId) {
 // 更新职位状态（上线/下线）
 export function updateJobStatus(jobId, status) {
   return request({
-    url: `/jobs/${jobId}/status`,
+    url: `/company/employee/jobs/${jobId}/status`,
     method: 'put',
     data: { status }
   })

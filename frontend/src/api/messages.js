@@ -14,7 +14,9 @@ export function sendMessageAPI(conversationId, data) {
   return request({
     url: `/conversations/${conversationId}/messages`,
     method: 'post',
-    data
+    data: {
+      content: data.content
+    }
   })
 } 
 

@@ -51,6 +51,8 @@ const routes = [
             localStorage.setItem('lastVisitedRole', userInfo.role)
             window.location.reload()
           }
+
+          console.log(userInfo);
           
           return userInfo.role === 'COMPANY' 
             ? import('../views/mine/CompanyMine.vue')

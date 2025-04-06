@@ -43,6 +43,25 @@
               <!-- 消息气泡 -->
               <div class="message-bubble">
                 <div class="message-text">{{ message.content }}</div>
+                <div v-if="isResumeLink(message.content)" class="resume-preview-container">
+                  <div class="resume-preview-card">
+                    <div class="resume-icon">
+                      <el-icon><Document /></el-icon>
+                    </div>
+                    <div class="resume-info">
+                      <div class="resume-title">求职简历</div>
+                      <div class="resume-desc">点击查看详细简历信息</div>
+                    </div>
+                    <el-button 
+                      type="primary" 
+                      size="small" 
+                      class="view-resume-btn"
+                      @click="handleViewResume()"
+                    >
+                      查看简历
+                    </el-button>
+                  </div>
+                </div>
               </div>
               
               <!-- 消息时间 - 确保每条消息都显示时间 -->
@@ -113,16 +132,78 @@
         </div>
       </div>
     </div>
+    
+    <!-- 简历预览弹窗 -->
+    <el-dialog
+      v-model="resumeDialogVisible"
+      title="简历预览"
+      width="80%"
+      :before-close="closeResumeDialog"
+      class="resume-dialog"
+      fullscreen
+    >
+      <div class="resume-dialog-content">
+        <div v-if="resumeLoading" class="resume-loading">
+          <el-icon class="loading-icon"><Loading /></el-icon>
+          <span>简历加载中...</span>
+        </div>
+        <div v-else-if="resumeError" class="resume-error">
+          <el-icon><CircleClose /></el-icon>
+          <span>{{ resumeError }}</span>
+        </div>
+        <div v-else class="pdf-container">
+          <!-- 添加PDF预览控制栏 -->
+          <div class="preview-toolbar">
+            <el-button-group>
+              <el-button :disabled="currentPage <= 1" @click="changePage(-1)">
+                上一页
+              </el-button>
+              <el-button :disabled="currentPage >= totalPages" @click="changePage(1)">
+                下一页
+              </el-button>
+            </el-button-group>
+            <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+            <el-button-group>
+              <el-button @click="changeScale(-0.2)">缩小</el-button>
+              <el-button @click="changeScale(0.2)">放大</el-button>
+            </el-button-group>
+          </div>
+          <!-- 替换iframe为canvas -->
+          <div class="canvas-container">
+            <canvas ref="canvasRef"></canvas>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="closeResumeDialog">关闭</el-button>
+          <el-button type="primary" @click="downloadResume" :loading="downloadLoading">
+            下载简历
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </template>
   
   <script setup>
-  import { ref, onMounted, nextTick, computed } from 'vue'
+  import { ref, onMounted, nextTick, computed, watch, onUnmounted } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
-  import { format, isToday, isYesterday, isSameDay } from 'date-fns'
+  import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns'
   import { getConversationMessages } from '@/api/jobs'
   import { sendMessageAPI } from '@/api/messages'
   import { ElMessage } from 'element-plus'
-  
+  import { Document, Loading, CircleClose } from '@element-plus/icons-vue'
+  import { getResumePDF, getResumePDFById } from '@/api/resume'
+  // 修改 PDF.js 导入
+  import * as pdfjsLib from 'pdfjs-dist'
+
+  // 设置 worker 路径为本地路径
+  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.mjs',
+    import.meta.url
+  ).href
+    
+
   const route = useRoute()
   const router = useRouter()
   const chatId = route.params.chatId
@@ -132,6 +213,20 @@
   const chatInfo = ref({})
   const isGroupChat = ref(false)
   const showQuickPhrases = ref(false)
+  
+  // 安全地解析日期
+  const safeParseDate = (dateString) => {
+    if (!dateString) {
+      return new Date(0); // 返回一个默认日期（1970年1月1日）
+    }
+    
+    try {
+      return parseISO(dateString);
+    } catch (error) {
+      console.error('日期解析错误:', error, dateString);
+      return new Date(0); // 解析失败时返回默认日期
+    }
+  }
   
   // 快捷语句
   const quickPhrases = ref([
@@ -156,140 +251,161 @@
   
   // 获取自己的头像
   const getSelfAvatar = () => {
-    return userInfo.value.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+    return userInfo.value.avatar || '/images/default-avatar.png'
   }
   
   // 获取对方的头像
   const getOtherUserAvatar = () => {
-    return chatInfo.value.avatar || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+    return chatInfo.value.avatar || '/images/default-avatar.png'
+  }
+  
+  // 判断是否需要显示日期分割线
+  const shouldShowDateDivider = (message, index) => {
+    if (index === 0) return true;
+    
+    if (!message.createTime || !messages.value[index - 1].createTime) {
+      return false;
+    }
+    
+    const currentDate = safeParseDate(message.createTime);
+    const prevDate = safeParseDate(messages.value[index - 1].createTime);
+    
+    return !isSameDay(currentDate, prevDate);
   }
   
   // 格式化日期
   const formatDate = (dateString) => {
-    if (!dateString) return ''
+    if (!dateString) return '';
     
-    const date = new Date(dateString)
-    
-    if (isToday(date)) {
-      return '今天'
-    } else if (isYesterday(date)) {
-      return '昨天'
-    } else {
-      return format(date, 'yyyy年MM月dd日')
+    try {
+      const date = safeParseDate(dateString);
+      
+      if (isToday(date)) {
+        return '今天';
+      } else if (isYesterday(date)) {
+        return '昨天';
+      } else {
+        return format(date, 'yyyy年MM月dd日');
+      }
+    } catch (error) {
+      console.error('格式化日期错误:', error);
+      return '';
     }
   }
   
   // 格式化消息时间
   const formatMessageTime = (dateString) => {
-    if (!dateString) return ''
+    if (!dateString) return '';
     
-    const date = new Date(dateString)
-    return format(date, 'HH:mm')
-  }
-  
-  // 判断是否需要显示日期分割线
-  const shouldShowDateDivider = (message, index) => {
-    if (index === 0) return true // 确保第一条消息也显示日期
-    
-    const currentDate = new Date(message.createdAt)
-    const prevDate = new Date(messages.value[index - 1].createdAt)
-    
-    return !isSameDay(currentDate, prevDate)
+    try {
+      const date = safeParseDate(dateString);
+      return format(date, 'HH:mm');
+    } catch (error) {
+      console.error('格式化时间错误:', error);
+      return '';
+    }
   }
   
   // 获取聊天消息
   const fetchMessages = async () => {
     try {
-      const res = await getConversationMessages(chatId)
+      const res = await getConversationMessages(chatId);
       if (res.code === 200) {
+        // 确保每条消息都有有效的createdAt属性
         messages.value = res.data || []
-        chatInfo.value = res.data.conversationInfo || {}
-        isGroupChat.value = res.data.conversationInfo?.type === 'GROUP'
+
+        // 按时间顺序排序
+        messages.value.sort((a, b) => {
+          return new Date(a.createTime) - new Date(b.createTime);
+        });
+        
+        console.log(messages.value)
+        chatInfo.value = res.data.conversationInfo || {};
         
         // 滚动到底部
-        await nextTick()
-        scrollToBottom()
+        await nextTick();
+        scrollToBottom();
       }
     } catch (error) {
-      console.error('获取消息失败:', error)
-      ElMessage.error('获取消息失败')
+      console.error('获取消息失败:', error);
+      ElMessage.error('获取消息失败');
     }
   }
   
   // 发送消息
   const sendMessage = async () => {
     if (!messageText.value.trim()) {
-      return
+      return;
     }
     
+    const tempId = Date.now().toString();
+    const tempMessage = {
+      id: tempId,
+      content: messageText.value,
+      senderId: userInfo.value.id,
+      senderName: userInfo.value.name,
+      senderRole: userInfo.value.role,
+      createdAt: new Date().toISOString(),
+      status: 'sending'
+    };
+    
+    // 添加临时消息
+    messages.value.push(tempMessage);
+    
+    // 清空输入框
+    const content = messageText.value;
+    messageText.value = '';
+    
+    // 关闭快捷语句面板
+    showQuickPhrases.value = false;
+    
+    // 滚动到底部
+    await nextTick();
+    scrollToBottom();
+    
     try {
-      const data = {
-        conversationId: chatId,
-        content: messageText.value,
-        type: 'TEXT'
-      }
-      
-      // 先添加到本地消息列表，提升用户体验
-      const tempMessage = {
-        id: 'temp-' + Date.now(),
-        content: messageText.value,
-        createdAt: new Date().toISOString(),
-        senderId: userInfo.value.id,
-        senderName: userInfo.value.name,
-        senderRole: userInfo.value.role,
-        status: 'SENDING'
-      }
-      
-      messages.value.push(tempMessage)
-      
-      // 清空输入框并关闭快捷语句面板
-      messageText.value = ''
-      showQuickPhrases.value = false
-      
-      // 滚动到底部
-      await nextTick()
-      scrollToBottom()
-      
-      // 发送消息到服务器
-      const res = await sendMessageAPI(chatId, data)
+      const res = await sendMessageAPI(chatId, {
+        content: content
+      });
       
       if (res.code === 200) {
+        // 确保返回的消息有createdAt属性
+        const responseMessage = res.data;
+        if (!responseMessage.createdAt) {
+          responseMessage.createdAt = new Date().toISOString();
+        }
+        
         // 更新临时消息状态
-        const index = messages.value.findIndex(m => m.id === tempMessage.id)
+        const index = messages.value.findIndex(msg => msg.id === tempId);
         if (index !== -1) {
           messages.value[index] = {
-            ...tempMessage,
-            id: res.data.id || tempMessage.id,
-            status: 'SENT'
-          }
+            ...responseMessage,
+            status: 'sent'
+          };
         }
       } else {
-        // 发送失败，更新状态
-        const index = messages.value.findIndex(m => m.id === tempMessage.id)
-        if (index !== -1) {
-          messages.value[index].status = 'FAILED'
-        }
-        ElMessage.error('发送失败')
+        throw new Error(res.message || '发送失败');
       }
     } catch (error) {
-      console.error('发送消息失败:', error)
-      ElMessage.error('发送消息失败')
+      console.error('发送消息失败:', error);
       
       // 更新临时消息状态为发送失败
-      const index = messages.value.findIndex(m => m.id.startsWith('temp-'))
+      const index = messages.value.findIndex(msg => msg.id === tempId);
       if (index !== -1) {
-        messages.value[index].status = 'FAILED'
+        messages.value[index].status = 'failed';
       }
+      
+      ElMessage.error('发送消息失败');
     }
   }
   
-  // 处理Enter键发送消息
+  // 处理Enter键
   const handleEnterPress = (e) => {
-    if (e.ctrlKey || e.metaKey) {
-      // Ctrl+Enter 或 Command+Enter 换行
+    if (e.ctrlKey) {
+      // Ctrl+Enter 换行
       messageText.value += '\n'
     } else {
-      // Enter 直接发送
+      // Enter 发送
       sendMessage()
     }
   }
@@ -317,13 +433,249 @@
     showQuickPhrases.value = false
   }
   
+  // 加载图标字体库
+  const loadIconFont = () => {
+    try {
+      const script = document.createElement('script')
+      script.src = 'https://at.alicdn.com/t/font_2553510_zvt5hy0d4i.js'
+      script.onerror = () => {
+        console.warn('图标字体加载失败，使用备用图标')
+      }
+      document.body.appendChild(script)
+    } catch (error) {
+      console.error('加载图标字体出错:', error)
+    }
+  }
+  
+  // 简历相关功能
+  const resumeDialogVisible = ref(false)
+  const resumeLoading = ref(false)
+  const resumeError = ref('')
+  const pdfSrc = ref('')
+  const downloadLoading = ref(false)
+  const currentResumeData = ref(null)
+  const canvasRef = ref(null)
+  const currentPage = ref(1)
+  const totalPages = ref(0)
+  const scale = ref(1.5)
+  let pdfDoc = null
+  
+  // 检测消息是否包含简历链接
+  const isResumeLink = (content) => {
+    return content && content.includes('这是我的简历，您可以查看')
+  }
+  
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // 处理查看简历
+  const handleViewResume = async () => {
+    resumeDialogVisible.value = true
+    resumeLoading.value = true
+    resumeError.value = ''
+    pdfSrc.value = ''
+
+    try {
+      if (localStorage.getItem('lastVisitedRole') === 'COMPANY') {
+        const rsp = await getConversationMessages(chatId)
+        const lens = rsp.data.length
+        if (lens > 0) {
+          const lastMsg = rsp.data[lens - 1]
+          const response = await getResumePDFById(lastMsg.senderId)
+
+          // 获取二进制数据
+          console.log("response.data: ", response.data);
+          const arrayBuffer = response.data
+          const bytes = new Uint8Array(arrayBuffer)
+
+          if (bytes.length === 0) {
+            throw new Error('简历数据为空')
+          }
+
+          // 加载 PDF 文档
+          pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise
+          totalPages.value = pdfDoc.numPages
+          
+          // 延迟一秒后渲染第一页
+          await delay(1000)
+          resumeLoading.value = false
+          
+          // 等待DOM更新后渲染PDF
+          await nextTick()
+          renderPage(1)
+          
+          ElMessage.success('简历加载成功')
+        }
+      } else {
+        // 调用API获取简历数据
+        const response = await getResumePDF()
+        
+        // 获取二进制数据
+        const arrayBuffer = response.data
+        const bytes = new Uint8Array(arrayBuffer)
+
+        if (bytes.length === 0) {
+          throw new Error('简历数据为空')
+        }
+
+        // 加载 PDF 文档
+        pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise
+        totalPages.value = pdfDoc.numPages
+        
+        // 延迟一秒后渲染第一页
+        await delay(1000)
+        resumeLoading.value = false
+        
+        // 等待DOM更新后渲染PDF
+        await nextTick()
+        renderPage(1)
+        
+        ElMessage.success('简历加载成功')
+      }
+
+      
+    } catch (error) {
+      console.error('获取简历失败:', error)
+      resumeError.value = '获取简历失败: ' + (error.message || '未知错误')
+      resumeLoading.value = false
+    }
+  }
+  
+  // 渲染PDF页面
+  const renderPage = async (pageNumber) => {
+    if (!pdfDoc) return
+
+    try {
+      const page = await pdfDoc.getPage(pageNumber)
+      const canvas = canvasRef.value
+      const context = canvas.getContext('2d')
+
+      const viewport = page.getViewport({ scale: scale.value })
+      canvas.height = viewport.height
+      canvas.width = viewport.width
+
+      await page.render({
+        canvasContext: context,
+        viewport: viewport
+      }).promise
+
+      currentPage.value = pageNumber
+    } catch (error) {
+      console.error('渲染页面失败:', error)
+      ElMessage.error('渲染页面失败')
+    }
+  }
+
+  // 翻页功能
+  const changePage = async (delta) => {
+    const newPage = currentPage.value + delta
+    if (newPage >= 1 && newPage <= totalPages.value) {
+      await renderPage(newPage)
+    }
+  }
+
+  // 缩放功能
+  const changeScale = async (delta) => {
+    scale.value = Math.max(0.5, Math.min(2.5, scale.value + delta))
+    await renderPage(currentPage.value)
+  }
+
+  // 下载简历
+  const downloadResume = async () => {
+    if (!pdfDoc) {
+      ElMessage.warning('简历数据不存在')
+      return
+    }
+    
+    downloadLoading.value = true
+    
+    try {
+      // 模拟下载延迟
+      await delay(1000)
+      
+      // 创建下载链接
+      const response = await getResumePDF()
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      
+      // 创建下载链接并点击
+      const link = document.createElement('a')
+      link.href = url
+      link.download = '求职简历.pdf'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // 释放URL对象
+      URL.revokeObjectURL(url)
+      
+      ElMessage.success('简历下载成功')
+    } catch (error) {
+      console.error('下载简历失败:', error)
+      ElMessage.error('下载简历失败')
+    } finally {
+      downloadLoading.value = false
+    }
+  }
+  
+  // 关闭简历预览
+  const closeResumeDialog = () => {
+    resumeDialogVisible.value = false
+    
+    // 释放PDF资源前先检查是否存在
+    if (pdfDoc) {
+      try {
+        // 安全地关闭PDF文档
+        pdfDoc.destroy().catch(e => console.error('PDF销毁失败:', e))
+      } catch (error) {
+        console.error('关闭PDF文档时出错:', error)
+      }
+    }
+    
+    // 重置所有相关状态
+    pdfDoc = null
+    currentPage.value = 1
+    totalPages.value = 0
+    scale.value = 1.5
+    resumeLoading.value = false
+    resumeError.value = ''
+    
+    // 清除canvas内容
+    if (canvasRef.value) {
+      const ctx = canvasRef.value.getContext('2d')
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height)
+      }
+    }
+  }
+    
+  // 添加定时器变量
+  let timer = null
+
   onMounted(() => {
     fetchMessages()
+    loadIconFont()
     
-    // 加载图标字体库
-    const script = document.createElement('script')
-    script.src = '//at.alicdn.com/t/font_2553510_zvt5nus3ae.js'
-    document.head.appendChild(script)
+    // 设置定时器，每30秒刷新一次消息
+    timer = setInterval(fetchMessages, 30000)
+  })
+
+  // 组件卸载时清除定时器和资源
+  onUnmounted(() => {
+    if (timer) {
+      clearInterval(timer)
+    }
+
+    // 释放PDF资源
+    if (pdfDoc) {
+      try {
+        pdfDoc.destroy().catch(e => console.error('PDF销毁失败:', e))
+      } catch (error) {
+        console.error('组件卸载时关闭PDF文档出错:', error)
+      }
+      pdfDoc = null
+    }
   })
   </script>
   
@@ -581,6 +933,7 @@
     width: 20px;
     height: 20px;
     margin-right: 4px;
+    display: inline-block;
   }
   
   .tool-icon span {
@@ -635,5 +988,138 @@
   [class^="el-icon-"] {
     font-size: 20px;
     color: #606266;
+  }
+  
+  /* 简历预览卡片样式 */
+  .resume-preview-container {
+    margin-top: 10px;
+  }
+  
+  .resume-preview-card {
+    display: flex;
+    align-items: center;
+    background-color: #f5f7fa;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.3s;
+  }
+  
+  .resume-preview-card:hover {
+    background-color: #eef1f6;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  }
+  
+  .resume-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    background-color: #409eff;
+    color: white;
+    border-radius: 8px;
+    margin-right: 12px;
+  }
+  
+  .resume-info {
+    flex: 1;
+  }
+  
+  .resume-title {
+    font-weight: bold;
+    font-size: 16px;
+    color: #303133;
+    margin-bottom: 4px;
+  }
+  
+  .resume-desc {
+    font-size: 12px;
+    color: #909399;
+  }
+  
+  .view-resume-btn {
+    margin-left: 12px;
+  }
+  
+  /* 简历弹窗样式 */
+  :deep(.resume-dialog .el-dialog__header) {
+    border-bottom: 1px solid #e4e7ed;
+    padding: 16px 20px;
+  }
+  
+  :deep(.resume-dialog .el-dialog__body) {
+    padding: 0;
+    height: calc(100vh - 120px);
+    overflow: hidden;
+  }
+  
+  .resume-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #909399;
+  }
+  
+  .loading-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+    animation: rotate 1.5s linear infinite;
+  }
+  
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  .resume-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #f56c6c;
+  }
+  
+  .pdf-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* 添加PDF预览工具栏样式 */
+  .preview-toolbar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    border-bottom: 1px solid #e4e7ed;
+    background-color: #f5f7fa;
+  }
+  
+  .page-info {
+    font-size: 14px;
+    color: #606266;
+    margin: 0 12px;
+  }
+  
+  /* 添加canvas容器样式 */
+  .canvas-container {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    background-color: #f5f5f5;
+  }
+  
+  canvas {
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+    background-color: white;
   }
   </style>

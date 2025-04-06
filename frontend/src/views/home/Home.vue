@@ -222,10 +222,12 @@ const completeStudentInfo = async () => {
         const profileRes = await getUserProfile()
         console.log('profileRes',profileRes)
         // 只有在获取不到用户资料时才显示完善信息弹窗
-        if (!profileRes.data) {
-          setTimeout(() => {
-            dialogStore.showCompleteInfoDialog()
-          }, 300)
+        if(profileRes.data.identity === "STUDENT") {
+          if (!profileRes.data.education || !profileRes.data.realName || !profileRes.data.university) {
+           setTimeout(() => {
+              dialogStore.showCompleteInfoDialog()
+            }, 300)
+          }
         }
       } catch (error) {
         console.error('获取用户资料失败:', error)

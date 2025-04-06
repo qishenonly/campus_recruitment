@@ -269,10 +269,12 @@ const handleFileChange = (event) => {
 
 // 上传简历
 const uploadResume = async (file) => {
+  const userInfos = JSON.parse(localStorage.getItem('userInfo'));
   try {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('name', file.name)
+    formData.append('studentId', userInfos.id)
     
     // TODO: 调用上传API
     const response = await uploadResumeAPI(formData)

@@ -88,26 +88,19 @@ CREATE TABLE resumes (
     self_evaluation TEXT,
     attachment_url VARCHAR(200),
     content TEXT,
+    position_applied VARCHAR(100),
+    status ENUM('待处理', '已查看', '面试中', '已录用', '已拒绝') NOT NULL DEFAULT '待处理',
+    phone VARCHAR(20),
+    email VARCHAR(100),
+    school VARCHAR(100),
+    major VARCHAR(100),
+    graduate_year VARCHAR(4),
+    submit_time DATETIME,
     create_time DATETIME NOT NULL,
     update_time DATETIME NOT NULL,
     FOREIGN KEY (student_id) REFERENCES students(id)
 );
 
--- 申请表
-CREATE TABLE applications (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    job_id BIGINT NOT NULL,
-    student_id BIGINT NOT NULL,
-    resume_id BIGINT NOT NULL,
-    apply_time DATETIME NOT NULL,
-    status ENUM('PENDING', 'VIEWED', 'INTERVIEW', 'OFFER', 'REJECTED') NOT NULL DEFAULT 'PENDING',
-    remarks TEXT,
-    feedback TEXT,
-    last_update_time DATETIME NOT NULL,
-    FOREIGN KEY (job_id) REFERENCES jobs(id),
-    FOREIGN KEY (student_id) REFERENCES students(id),
-    FOREIGN KEY (resume_id) REFERENCES resumes(id)
-);
 
 -- 通知表
 CREATE TABLE notifications (
@@ -167,10 +160,10 @@ CREATE TABLE messages (
 -- 面试表
 CREATE TABLE interviews (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    application_id BIGINT NOT NULL,
+    application_id BIGINT,
     interview_time DATETIME NOT NULL,
     duration INT NOT NULL, -- 面试时长（分钟）
-    type ENUM('ONLINE', 'OFFLINE') NOT NULL,
+    type ENUM('ONLINE', 'ONSITE', "PHONE") NOT NULL,
     location VARCHAR(200), -- 线下面试地点
     online_url VARCHAR(200), -- 线上面试链接
     description TEXT, -- 面试说明
@@ -178,7 +171,8 @@ CREATE TABLE interviews (
     feedback TEXT, -- 面试反馈
     create_time DATETIME NOT NULL,
     update_time DATETIME NOT NULL,
-    FOREIGN KEY (application_id) REFERENCES applications(id)
+    candidate_email VARCHAR(100), -- 候选人邮箱
+    FOREIGN KEY (application_id) REFERENCES job_applications(id)
 );
 
 -- 职位收藏表
@@ -235,11 +229,3 @@ INSERT INTO jobs (company_id, publisher_id, publisher_name, publisher_position, 
 -- 5. 插入简历信息
 INSERT INTO resumes (student_id, name, education, experience, skills, projects, awards, self_evaluation, create_time, update_time) VALUES
 (1, '我的简历', '北京大学 计算机科学专业 本科', '某公司实习经历', 'Java, Spring Boot, MySQL', '校园项目经验', '奖学金获得者', '积极主动，学习能力强', NOW(), NOW());
-
--- 6. 插入申请记录
-INSERT INTO applications (job_id, student_id, resume_id, apply_time, status, last_update_time) VALUES
-(1, 1, 1, NOW(), 'PENDING', NOW());
-
--- 7. 插入通知信息
-INSERT INTO notifications (user_id, title, content, type, related_id, create_time) VALUES
-(1, '简历投递成功', '您已成功投递Java后端开发工程师职位', 'APPLICATION', 1, NOW());

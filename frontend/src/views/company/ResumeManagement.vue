@@ -5,12 +5,11 @@
       <div class="filter-section">
         <el-select v-model="statusFilter" placeholder="简历状态" @change="handleFilterChange">
           <el-option label="全部" value="" />
-          <el-option label="未查看" value="UNREAD" />
-          <el-option label="已查看" value="VIEWED" />
-          <el-option label="已联系" value="CONTACTED" />
-          <el-option label="已面试" value="INTERVIEWED" />
-          <el-option label="已录用" value="HIRED" />
-          <el-option label="已拒绝" value="REJECTED" />
+          <el-option label="待处理" value="待处理" />
+          <el-option label="已查看" value="已查看" />
+          <el-option label="面试中" value="面试中" />
+          <el-option label="已录用" value="已录用" />
+          <el-option label="已拒绝" value="已拒绝" />
         </el-select>
         
         <el-select v-model="jobFilter" placeholder="职位筛选" @change="handleFilterChange">
@@ -38,28 +37,28 @@
 
     <el-table
       v-loading="loading"
-      :data="resumeList"
+      :data="processedResumeList"
       style="width: 100%"
       @row-click="handleRowClick"
     >
-      <el-table-column prop="applicantName" label="姓名" min-width="100" />
-      <el-table-column prop="jobTitle" label="应聘职位" min-width="150" />
+      <el-table-column prop="name" label="姓名" min-width="100" />
+      <el-table-column prop="positionApplied" label="应聘职位" min-width="150" />
       <el-table-column prop="education" label="学历" min-width="100">
         <template #default="scope">
-          <div>{{ scope.row.education }}</div>
-          <div class="text-secondary">{{ scope.row.school }}</div>
+          <div>{{ scope.row.education || '未知' }}</div>
+          <div class="text-secondary">{{ scope.row.school || '未知' }}</div>
         </template>
       </el-table-column>
       <el-table-column prop="major" label="专业" min-width="120" />
-      <el-table-column prop="applyTime" label="投递时间" min-width="120">
+      <el-table-column prop="submitTime" label="投递时间" min-width="120">
         <template #default="scope">
-          {{ formatDate(scope.row.applyTime) }}
+          {{ formatDate(scope.row.submitTime) }}
         </template>
       </el-table-column>
       <el-table-column prop="status" label="状态" min-width="100">
         <template #default="scope">
           <el-tag :type="getStatusType(scope.row.status)">
-            {{ getStatusText(scope.row.status) }}
+            {{ scope.row.status || '待处理' }}
           </el-tag>
         </template>
       </el-table-column>
@@ -89,11 +88,11 @@
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="VIEWED">已查看</el-dropdown-item>
-                <el-dropdown-item command="CONTACTED">已联系</el-dropdown-item>
-                <el-dropdown-item command="INTERVIEWED">已面试</el-dropdown-item>
-                <el-dropdown-item command="HIRED">已录用</el-dropdown-item>
-                <el-dropdown-item command="REJECTED">已拒绝</el-dropdown-item>
+                <el-dropdown-item command="待处理">待处理</el-dropdown-item>
+                <el-dropdown-item command="已查看">已查看</el-dropdown-item>
+                <el-dropdown-item command="面试中">面试中</el-dropdown-item>
+                <el-dropdown-item command="已录用">已录用</el-dropdown-item>
+                <el-dropdown-item command="已拒绝">已拒绝</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -122,89 +121,75 @@
     >
       <div v-if="currentResume" class="resume-detail">
         <div class="resume-header">
-          <h3>{{ currentResume.applicantName }}</h3>
+          <h3>{{ currentResume.name }}</h3>
           <div class="resume-meta">
-            <span>{{ currentResume.gender }}</span>
-            <span>{{ currentResume.age }}岁</span>
-            <span>{{ currentResume.education }}</span>
-            <span>{{ currentResume.workExperience }}</span>
+            <span v-if="currentResume.positionApplied">应聘职位：{{ currentResume.positionApplied }}</span>
+            <span>{{ currentResume.education || '学历未知' }}</span>
+            <span>{{ currentResume.major || '专业未知' }}</span>
           </div>
           <div class="contact-info">
-            <p><i class="el-icon-phone"></i> {{ currentResume.phone }}</p>
-            <p><i class="el-icon-message"></i> {{ currentResume.email }}</p>
+            <p><i class="el-icon-phone"></i> {{ currentResume.phone || '电话未知' }}</p>
+            <p><i class="el-icon-message"></i> {{ currentResume.email || '邮箱未知' }}</p>
           </div>
         </div>
 
         <el-divider />
 
         <div class="resume-section">
-          <h4>教育经历</h4>
-          <div class="education-item" v-for="(edu, index) in currentResume.educationExperience" :key="index">
+          <h4>教育背景</h4>
+          <div class="education-item">
             <div class="edu-header">
-              <span class="school">{{ edu.school }}</span>
-              <span class="time">{{ edu.startTime }} - {{ edu.endTime }}</span>
+              <span class="school">{{ currentResume.school || '学校未知' }}</span>
+              <span class="time" v-if="currentResume.graduateYear">毕业年份: {{ currentResume.graduateYear }}</span>
             </div>
             <div class="edu-detail">
-              <span class="major">{{ edu.major }}</span>
-              <span class="degree">{{ edu.degree }}</span>
+              <span class="major">{{ currentResume.major || '专业未知' }}</span>
+              <span class="degree">{{ currentResume.education || '学历未知' }}</span>
             </div>
           </div>
         </div>
 
         <el-divider />
 
-        <div class="resume-section">
+        <div class="resume-section" v-if="currentResume.experience">
           <h4>工作经历</h4>
-          <div class="work-item" v-for="(work, index) in currentResume.workExperiences" :key="index">
-            <div class="work-header">
-              <span class="company">{{ work.company }}</span>
-              <span class="time">{{ work.startTime }} - {{ work.endTime }}</span>
-            </div>
-            <div class="position">{{ work.position }}</div>
-            <div class="description">{{ work.description }}</div>
-          </div>
+          <p class="description">{{ currentResume.experience }}</p>
         </div>
 
-        <el-divider />
+        <el-divider v-if="currentResume.experience" />
 
-        <div class="resume-section">
+        <div class="resume-section" v-if="currentResume.projects">
           <h4>项目经历</h4>
-          <div class="project-item" v-for="(project, index) in currentResume.projectExperiences" :key="index">
-            <div class="project-header">
-              <span class="project-name">{{ project.name }}</span>
-              <span class="time">{{ project.startTime }} - {{ project.endTime }}</span>
-            </div>
-            <div class="role">{{ project.role }}</div>
-            <div class="description">{{ project.description }}</div>
-          </div>
+          <p class="description">{{ currentResume.projects }}</p>
         </div>
 
-        <el-divider />
+        <el-divider v-if="currentResume.projects" />
 
-        <div class="resume-section">
+        <div class="resume-section" v-if="currentResume.skills">
           <h4>技能特长</h4>
-          <div class="skills">
-            <el-tag v-for="(skill, index) in currentResume.skills" :key="index" class="skill-tag">
-              {{ skill }}
-            </el-tag>
-          </div>
+          <p class="description">{{ currentResume.skills }}</p>
         </div>
 
-        <el-divider />
+        <el-divider v-if="currentResume.skills" />
 
-        <div class="resume-section">
+        <div class="resume-section" v-if="currentResume.selfEvaluation">
           <h4>自我评价</h4>
           <p class="self-evaluation">{{ currentResume.selfEvaluation }}</p>
         </div>
 
-        <el-divider />
+        <el-divider v-if="currentResume.selfEvaluation" />
+
+        <div class="resume-section" v-if="currentResume.awards">
+          <h4>获奖情况</h4>
+          <p class="description">{{ currentResume.awards }}</p>
+        </div>
+
+        <el-divider v-if="currentResume.awards" />
 
         <div class="resume-section">
-          <h4>求职意向</h4>
-          <div class="job-intention">
-            <p><strong>期望职位：</strong>{{ currentResume.jobIntention }}</p>
-            <p><strong>期望薪资：</strong>{{ currentResume.expectedSalary }}</p>
-            <p><strong>期望城市：</strong>{{ currentResume.expectedCity }}</p>
+          <h4>原始内容</h4>
+          <div class="content" style="white-space: pre-line; max-height: 300px; overflow-y: auto; padding: 10px; background-color: #f5f7fa; border-radius: 4px;">
+            {{ currentResume.content }}
           </div>
         </div>
 
@@ -217,11 +202,11 @@
             </el-button>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="VIEWED">已查看</el-dropdown-item>
-                <el-dropdown-item command="CONTACTED">已联系</el-dropdown-item>
-                <el-dropdown-item command="INTERVIEWED">已面试</el-dropdown-item>
-                <el-dropdown-item command="HIRED">已录用</el-dropdown-item>
-                <el-dropdown-item command="REJECTED">已拒绝</el-dropdown-item>
+                <el-dropdown-item command="待处理">待处理</el-dropdown-item>
+                <el-dropdown-item command="已查看">已查看</el-dropdown-item>
+                <el-dropdown-item command="面试中">面试中</el-dropdown-item>
+                <el-dropdown-item command="已录用">已录用</el-dropdown-item>
+                <el-dropdown-item command="已拒绝">已拒绝</el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -242,6 +227,22 @@ import { getCompanyPublishedJobs } from '@/api/company-jobs'
 // 状态和筛选
 const loading = ref(false)
 const resumeList = ref([])
+const processedResumeList = computed(() => {
+  return resumeList.value.map(resume => {
+    // 确保所有必要字段都有默认值
+    return {
+      ...resume,
+      name: resume.name || '未知姓名',
+      positionApplied: resume.positionApplied || '未知职位',
+      status: resume.status || '待处理',
+      education: resume.education || '未知',
+      school: resume.school || '未知',
+      major: resume.major || '未知',
+      // 确保投递时间存在
+      submitTime: resume.submitTime || resume.createTime,
+    }
+  })
+})
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -259,7 +260,7 @@ const fetchResumeList = async () => {
   try {
     loading.value = true
     const params = {
-      page: currentPage.value,
+      page: currentPage.value-1,
       size: pageSize.value,
       status: statusFilter.value,
       jobId: jobFilter.value,
@@ -267,6 +268,7 @@ const fetchResumeList = async () => {
     }
     
     const res = await getCompanyResumes(params)
+    console.log('获取到的简历数据:', res.data)
     resumeList.value = res.data.content
     total.value = res.data.totalElements
   } catch (error) {
@@ -294,13 +296,13 @@ const viewResume = async (resume) => {
     currentResume.value = res.data
     resumeDialogVisible.value = true
     
-    // 如果简历状态是未查看，自动更新为已查看
-    if (resume.status === 'UNREAD') {
-      await updateStatus(resume.id, 'VIEWED')
+    // 如果简历状态是待处理，自动更新为已查看
+    if (resume.status === '待处理') {
+      await updateStatus(resume.id, '已查看')
       // 更新列表中的状态
       const index = resumeList.value.findIndex(item => item.id === resume.id)
       if (index !== -1) {
-        resumeList.value[index].status = 'VIEWED'
+        resumeList.value[index].status = '已查看'
       }
     }
   } catch (error) {
@@ -351,7 +353,13 @@ const updateStatus = async (resumeId, status) => {
 // 联系候选人
 const contactApplicant = (resume) => {
   // 这里可以实现发起聊天或者发送邮件的功能
-  showToast('联系功能开发中')
+  if (resume.phone) {
+    showToast(`联系电话：${resume.phone}`)
+  } else if (resume.email) {
+    showToast(`联系邮箱：${resume.email}`)
+  } else {
+    showToast('没有联系方式')
+  }
 }
 
 // 处理筛选变化
@@ -384,32 +392,23 @@ const handleRowClick = (row) => {
 
 // 格式化日期
 const formatDate = (date) => {
-  if (!date) return ''
+  if (!date) return '未知时间'
   return format(new Date(date), 'yyyy-MM-dd HH:mm')
 }
 
 // 获取状态文本
 const getStatusText = (status) => {
-  const statusMap = {
-    'UNREAD': '未查看',
-    'VIEWED': '已查看',
-    'CONTACTED': '已联系',
-    'INTERVIEWED': '已面试',
-    'HIRED': '已录用',
-    'REJECTED': '已拒绝'
-  }
-  return statusMap[status] || status
+  return status || '待处理'
 }
 
 // 获取状态类型
 const getStatusType = (status) => {
   const typeMap = {
-    'UNREAD': '',
-    'VIEWED': 'info',
-    'CONTACTED': 'warning',
-    'INTERVIEWED': 'warning',
-    'HIRED': 'success',
-    'REJECTED': 'danger'
+    '待处理': '',
+    '已查看': 'info',
+    '面试中': 'warning',
+    '已录用': 'success',
+    '已拒绝': 'danger'
   }
   return typeMap[status] || ''
 }

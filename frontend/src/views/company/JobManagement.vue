@@ -199,7 +199,7 @@ const fetchJobs = async () => {
   loading.value = true
   try {
     const params = {
-      page: currentPage.value,
+      page: currentPage.value-1,
       size: pageSize.value,
       query: searchQuery.value,
       status: statusFilter.value

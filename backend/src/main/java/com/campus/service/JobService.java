@@ -3,9 +3,11 @@ package com.campus.service;
 import com.campus.model.Job;
 import com.campus.model.Company;
 import com.campus.model.User;
+import com.campus.model.JobApplication;
 import com.campus.repository.JobRepository;
 import com.campus.repository.CompanyRepository;
 import com.campus.repository.UserRepository;
+import com.campus.repository.JobApplicationRepository;
 import com.campus.dto.JobDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +33,9 @@ public class JobService {
     
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private JobApplicationRepository jobApplicationRepository;
     
     public Page<Job> findAll(Pageable pageable) {
         return jobRepository.findAll(pageable);
@@ -151,5 +156,30 @@ public class JobService {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new RuntimeException("职位不存在"));
         return job.getCompanyId();
+    }
+
+    // 查找企业收到的所有职位申请
+    public Page<JobApplication> findApplicationsByCompanyId(Long companyId, Pageable pageable) {
+        return jobApplicationRepository.findByJobCompanyId(companyId, pageable);
+    }
+    
+    // 更新申请状态
+    @Transactional
+    public void updateApplicationStatus(Long applicationId, Long companyId, String status) {
+        JobApplication application = jobApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new RuntimeException("申请记录不存在"));
+        
+        // 验证该申请是否属于该企业的职位
+        Job job = jobRepository.findById(application.getJobId())
+                .orElseThrow(() -> new RuntimeException("职位不存在"));
+        
+        if (!job.getCompanyId().equals(companyId)) {
+            throw new RuntimeException("无权操作此申请");
+        }
+        
+        // 更新状态
+        application.setStatus(JobApplication.ApplicationStatus.valueOf(status));
+        application.setUpdateTime(LocalDateTime.now());
+        jobApplicationRepository.save(application);
     }
 } 

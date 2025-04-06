@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function updateUserProfile(data) {
   return request({
-    url: '/user/profile',
+    url: '/profile',
     method: 'post',
     data
   })

@@ -57,6 +57,7 @@ public class UserController {
             userInfo.put("expectedPosition", student.getExpectedPosition());
             userInfo.put("expectedSalary", student.getExpectedSalary());
             userInfo.put("expectedCity", student.getExpectedCity());
+            userInfo.put("identity", user.getRole());
             
             Map<String, Object> response = new HashMap<>();
             response.put("code", 200);

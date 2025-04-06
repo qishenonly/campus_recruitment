@@ -12,7 +12,7 @@
         <el-option label="待安排" value="PENDING" />
         <el-option label="已安排" value="SCHEDULED" />
         <el-option label="已完成" value="COMPLETED" />
-        <el-option label="已取消" value="CANCELLED" />
+        <el-option label="已取消" value="CANCELED" />
       </el-select>
       
       <el-input
@@ -43,8 +43,8 @@
       </el-table-column>
       <el-table-column prop="interviewType" label="面试方式" min-width="120">
         <template #default="scope">
-          <el-tag :type="getInterviewTypeTag(scope.row.interviewType)">
-            {{ getInterviewTypeText(scope.row.interviewType) }}
+          <el-tag :type="getInterviewTypeTag(scope.row.type)">
+            {{ getInterviewTypeText(scope.row.type) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -76,7 +76,7 @@
             type="danger" 
             link 
             @click="handleCancel(scope.row)"
-            v-if="scope.row.status !== 'COMPLETED' && scope.row.status !== 'CANCELLED'"
+            v-if="scope.row.status !== 'COMPLETED' && scope.row.status !== 'CANCELED'"
           >
             取消
           </el-button>
@@ -139,7 +139,7 @@
         <el-form-item label="面试方式" prop="interviewType">
           <el-select v-model="form.interviewType" placeholder="请选择面试方式" style="width: 100%">
             <el-option label="现场面试" value="ONSITE" />
-            <el-option label="视频面试" value="VIDEO" />
+            <el-option label="视频面试" value="ONLINE" />
             <el-option label="电话面试" value="PHONE" />
           </el-select>
         </el-form-item>
@@ -148,7 +148,7 @@
           <el-input v-model="form.location" placeholder="请输入面试地点" />
         </el-form-item>
         
-        <el-form-item label="视频链接" prop="location" v-if="form.interviewType === 'VIDEO'">
+        <el-form-item label="视频链接" prop="location" v-if="form.interviewType === 'ONLINE'">
           <el-input v-model="form.location" placeholder="请输入视频会议链接" />
         </el-form-item>
         
@@ -175,7 +175,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { format } from 'date-fns'
-import { getCompanyInterviews, createInterview, updateInterview, updateInterviewStatus } from '@/api/company-interviews'
+import { getCompanyInterviews, createInterview, updateInterview, updateInterviewStatus, checkCandidate } from '@/api/company-interviews'
+import { getCompanyPublishedJobs } from '@/api/company-jobs'
 
 // 数据
 const loading = ref(false)
@@ -218,58 +219,16 @@ const fetchInterviews = async () => {
   loading.value = true
   try {
     const params = {
-      page: currentPage.value,
+      page: currentPage.value-1,
       size: pageSize.value,
       status: statusFilter.value,
       keyword: searchKeyword.value
     }
     
     // 实际项目中应该调用API
-    // const res = await getCompanyInterviews(params)
-    const res = {
-      data: [
-        {
-          id: 1,
-          candidateName: '张三',
-          candidatePhone: '13800138000',
-          jobId: 1,
-          jobTitle: '前端开发工程师',
-          interviewTime: '2023-06-15 14:00:00',
-          interviewType: 'ONSITE',
-          location: '北京市海淀区科技园A座302室',
-          description: '请准备自我介绍和项目经验分享',
-          status: 'COMPLETED'
-        },
-        {
-          id: 2,
-          candidateName: '李四',
-          candidatePhone: '13900139000',
-          jobId: 2,
-          jobTitle: 'Java后端开发',
-          interviewTime: '2023-06-16 10:30:00',
-          interviewType: 'VIDEO',
-          location: 'https://meeting.tencent.com/s/abcdef',
-          description: '请提前准备好电脑和网络环境',
-          status: 'SCHEDULED'
-        },
-        {
-          id: 3,
-          candidateName: '王五',
-          candidatePhone: '13700137000',
-          jobId: 3,
-          jobTitle: '产品经理',
-          interviewTime: '2023-06-14 16:00:00',
-          interviewType: 'PHONE',
-          location: '',
-          description: '电话面试，请保持手机畅通',
-          status: 'CANCELLED'
-        }
-      ],
-      total: 3
-    }
-    
-    interviewList.value = res.data
-    total.value = res.total
+    const res = await getCompanyInterviews(params)
+    interviewList.value = res.data.content
+    total.value = res.data.totalElements
   } catch (error) {
     console.error('获取面试列表失败:', error)
     ElMessage.error('获取面试列表失败')
@@ -282,16 +241,9 @@ const fetchInterviews = async () => {
 const fetchJobs = async () => {
   try {
     // 实际项目中应该调用API
-    // const res = await getCompanyPublishedJobs()
-    const res = {
-      data: [
-        { id: 1, title: '前端开发工程师' },
-        { id: 2, title: 'Java后端开发' },
-        { id: 3, title: '产品经理' },
-        { id: 4, title: 'UI设计师' }
-      ]
-    }
-    jobOptions.value = res.data
+    const res = await getCompanyPublishedJobs()
+    console.log(res)
+    jobOptions.value = res.data.content
   } catch (error) {
     console.error('获取职位列表失败:', error)
   }
@@ -363,8 +315,7 @@ const handleCancel = (row) => {
     type: 'warning'
   }).then(async () => {
     try {
-      // 实际项目中应该调用API
-      // await updateInterviewStatus(row.id, 'CANCELLED')
+      await updateInterviewStatus(row.id, 'CANCELED')
       ElMessage.success('操作成功')
       fetchInterviews()
     } catch (error) {
@@ -400,6 +351,14 @@ const submitForm = async () => {
   await formRef.value.validate(async (valid) => {
     if (valid) {
       try {
+        // 检查候选人是否存在
+        console.log(form.candidateName);
+        const candidateExists = await checkCandidate(form.candidateName)
+        if (!candidateExists.data) {
+          ElMessage.error('候选人不存在')
+          return
+        }
+
         // 获取职位标题
         const job = jobOptions.value.find(item => item.id === form.jobId)
         if (job) {
@@ -407,12 +366,10 @@ const submitForm = async () => {
         }
         
         if (isEdit.value) {
-          // 实际项目中应该调用API
-          // await updateInterview(form.id, form)
+          await updateInterview(form.id, form)
           ElMessage.success('更新成功')
         } else {
-          // 实际项目中应该调用API
-          // await createInterview(form)
+          await createInterview(form)
           ElMessage.success('创建成功')
         }
         
@@ -436,7 +393,7 @@ const formatDateTime = (dateTime) => {
 const getInterviewTypeTag = (type) => {
   const typeMap = {
     'ONSITE': 'success',
-    'VIDEO': 'primary',
+    'ONLINE': 'primary',
     'PHONE': 'info'
   }
   return typeMap[type] || ''
@@ -444,9 +401,10 @@ const getInterviewTypeTag = (type) => {
 
 // 获取面试方式文本
 const getInterviewTypeText = (type) => {
+  console.log(type)
   const textMap = {
     'ONSITE': '现场面试',
-    'VIDEO': '视频面试',
+    'ONLINE': '视频面试',
     'PHONE': '电话面试'
   }
   return textMap[type] || '未知'
@@ -456,9 +414,10 @@ const getInterviewTypeText = (type) => {
 const getStatusType = (status) => {
   const typeMap = {
     'PENDING': 'info',
-    'SCHEDULED': 'primary',
+    'ACCEPTED': 'primary',
     'COMPLETED': 'success',
-    'CANCELLED': 'danger'
+    'REJECTED': 'danger',
+    'CANCELED': 'danger'
   }
   return typeMap[status] || ''
 }
@@ -467,9 +426,10 @@ const getStatusType = (status) => {
 const getStatusText = (status) => {
   const textMap = {
     'PENDING': '待安排',
-    'SCHEDULED': '已安排',
+    'ACCEPTED': '已安排',
     'COMPLETED': '已完成',
-    'CANCELLED': '已取消'
+    'REJECTED': '已拒绝',
+    'CANCELED': '已取消'
   }
   return textMap[status] || '未知'
 }

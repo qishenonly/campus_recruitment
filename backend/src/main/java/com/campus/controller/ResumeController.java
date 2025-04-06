@@ -4,7 +4,6 @@ import com.campus.model.Resume;
 import com.campus.service.ResumeService;
 import com.campus.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/resumes")
@@ -35,6 +35,7 @@ public class ResumeController {
             response.put("code", 200);
             response.put("message", "简历上传成功");
             response.put("data", resume);
+            
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
@@ -66,11 +67,34 @@ public class ResumeController {
     }
 
     @GetMapping(value = "/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public byte[] getResumePdf(@RequestHeader("Authorization") String token) throws Exception {
-        String jwtToken = token.replace("Bearer ", "");
-        Long userId = JwtUtil.getUserIdFromToken(jwtToken);
-        
-        return resumeService.getResumePdf(userId);
+    public ResponseEntity<?> getResumePdf(@RequestHeader("Authorization") String token) {
+        try {
+            String jwtToken = token.replace("Bearer ", "");
+            Long userId = JwtUtil.getUserIdFromToken(jwtToken);
+            
+            byte[] pdfBytes = resumeService.getResumePdf(userId);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdfBytes);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping(value = "/pdfById", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<?> getResumePdfById(@RequestParam("userId") Long userId) {
+        try {
+            byte[] pdfBytes = resumeService.getResumePdf(userId);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdfBytes);
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @DeleteMapping
@@ -113,4 +137,5 @@ public class ResumeController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
+
 } 

@@ -1,9 +1,10 @@
 import request from '@/utils/request'
+import { expandKeys } from 'element-plus/es/components/table-v2/src/common.mjs'
 
 // 上传简历
 export function uploadResume(data) {
   return request({
-    url: '/resumes/upload',
+    url: '/resume-parse/upload',
     method: 'post',
     data,
     headers: {
@@ -40,9 +41,25 @@ export function getResumePDF() {
   })
 }
 
+// 
+export function getResumePDFById(id ) {
+  return request({
+    url: '/resumes/pdfById',
+    method: 'get',
+    responseType: 'arraybuffer',
+    headers: {
+        'Accept': 'application/pdf'
+      },
+    params: {
+      userId:id
+    }
+  })
+}
+
 export default {
   uploadResume,
   getResume,
   deleteResume,
-  getResumePDF
+  getResumePDF,
+  getResumePDFById
 }

@@ -20,4 +20,25 @@ public class CompanyService {
     public Page<Company> searchCompanies(String keyword, Pageable pageable) {
         return companyRepository.findByCompanyNameContainingOrIndustryContaining(keyword, keyword, pageable);
     }
+    
+    // 根据用户ID查找企业ID
+    public Long findCompanyIdByUserId(Long userId) {
+        Company company = companyRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("企业信息不存在"));
+        return company.getId();
+    }
+    
+    // 保存或更新企业信息
+    public Company save(Company company) {
+        return companyRepository.save(company);
+    }
+
+    /**
+     * 根据公司ID查询公司名称
+     */
+    public String findCompanyNameById(Long companyId) {
+        return companyRepository.findById(companyId)
+                .map(Company::getCompanyName)
+                .orElse("未知公司");
+    }
 } 

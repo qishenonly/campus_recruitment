@@ -26,6 +26,14 @@ export function createInterview(data) {
   })
 }
 
+// 检查候选人是否存在
+export function checkCandidate(name) {
+  return request({
+    url: '/company/interviews/check-candidate',
+    method: 'get',
+    params: { name }
+  })
+}
 // 更新面试信息
 export function updateInterview(interviewId, data) {
   return request({

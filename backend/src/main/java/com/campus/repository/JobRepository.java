@@ -7,7 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
+@Repository
 public interface JobRepository extends JpaRepository<Job, Long> {
     
     @Query(value = "SELECT * FROM jobs j WHERE " +
@@ -45,4 +49,20 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     Page<Job> findByStatus(Job.JobStatus status, Pageable pageable);
 
     Page<Job> findByTitleContainingOrDescriptionContaining(String title, String description, Pageable pageable);
+
+    // 根据发布者ID查找职位
+    Page<Job> findByPublisherId(Long publisherId, Pageable pageable);
+    
+    // 搜索职位
+    @Query("SELECT j FROM Job j WHERE " +
+           "(:keyword IS NULL OR j.title LIKE %:keyword% OR j.description LIKE %:keyword%) AND " +
+           "(:location IS NULL OR j.location LIKE %:location%) AND " +
+           "(:education IS NULL OR j.educationRequirement = :education) AND " +
+           "(:positionType IS NULL OR j.positionType = :positionType) AND " +
+           "(:salary IS NULL OR j.salary LIKE %:salary%)")
+    Page<Job> search(String keyword, String location, String education, 
+                    Job.PositionType positionType, String salary, Pageable pageable);
+
+    @Query("SELECT j.id FROM Job j WHERE j.companyId = :companyId")
+    List<Long> findIdsByCompanyId(@Param("companyId") Long companyId);
 } 
