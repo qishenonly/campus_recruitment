@@ -11,6 +11,9 @@
           </div>
           <div class="header-info">
             <div class="chat-name">{{ chatInfo.name || '聊天' }}</div>
+            <div class="chat-meta" v-if="jobInfo.title">
+              <span class="job-title">{{ jobInfo.title }}</span>
+            </div>
             <div class="chat-status">{{ chatInfo.online ? '在线' : '离线' }}</div>
           </div>
         </div>
@@ -191,6 +194,7 @@
   import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns'
   import { getConversationMessages } from '@/api/jobs'
   import { sendMessageAPI } from '@/api/messages'
+  import { getCompanyByJobId } from '@/api/jobs'
   import { ElMessage } from 'element-plus'
   import { Document, Loading, CircleClose } from '@element-plus/icons-vue'
   import { getResumePDF, getResumePDFById } from '@/api/resume'
@@ -213,6 +217,10 @@
   const chatInfo = ref({})
   const isGroupChat = ref(false)
   const showQuickPhrases = ref(false)
+  const jobInfo = ref({
+    title: route.query.jobTitle || '',
+    id: route.query.jobId || ''
+  })
   
   // 安全地解析日期
   const safeParseDate = (dateString) => {
@@ -309,6 +317,7 @@
   // 获取聊天消息
   const fetchMessages = async () => {
     try {
+      console.log('获取聊天id:', chatId, '的消息');
       const res = await getConversationMessages(chatId);
       if (res.code === 200) {
         // 确保每条消息都有有效的createdAt属性
@@ -319,8 +328,89 @@
           return new Date(a.createTime) - new Date(b.createTime);
         });
         
-        console.log(messages.value)
+        console.log('获取到的聊天消息:', messages.value);
         chatInfo.value = res.data.conversationInfo || {};
+        
+        // 获取第一条消息，查找是否包含职位信息
+        if (messages.value.length > 0) {
+          const firstMessage = messages.value[0];
+          console.log('第一条消息:', firstMessage);
+          
+          // 检查是否有职位信息
+          if (firstMessage.jobTitle && !jobInfo.value.title) {
+            console.log('设置职位标题:', firstMessage.jobTitle);
+            jobInfo.value.title = firstMessage.jobTitle;
+          }
+          if (firstMessage.jobId && !jobInfo.value.id) {
+            console.log('设置职位ID:', firstMessage.jobId);
+            jobInfo.value.id = firstMessage.jobId;
+            
+            // 如果有职位ID，尝试获取公司信息
+            if (firstMessage.jobId) {
+              try {
+                const companyResponse = await getCompanyByJobId(firstMessage.jobId);
+                console.log('根据职位ID获取到的信息:', companyResponse);
+                if (companyResponse.code === 200 && companyResponse.data) {
+                  // 更新聊天头部显示的公司信息
+                  if (companyResponse.data.company) {
+                    chatInfo.value.name = companyResponse.data.company.name;
+                    chatInfo.value.avatar = companyResponse.data.company.logo;
+                    // 将公司信息添加到jobInfo中
+                    jobInfo.value.companyName = companyResponse.data.company.name;
+                    jobInfo.value.companyLogo = companyResponse.data.company.logo;
+                    jobInfo.value.companySize = companyResponse.data.company.size;
+                    jobInfo.value.companyIndustry = companyResponse.data.company.industry;
+                  }
+                  
+                  // 更新职位信息
+                  if (companyResponse.data.job && (!jobInfo.value.title || jobInfo.value.title === '')) {
+                    jobInfo.value.title = companyResponse.data.job.title;
+                  }
+                }
+              } catch (error) {
+                console.error('获取公司信息失败:', error);
+              }
+            }
+          }
+          
+          // 尝试从消息内容中提取职位信息
+          if (!jobInfo.value.title && firstMessage.content && firstMessage.content.includes('投递')) {
+            const match = firstMessage.content.match(/投递"(.*?)"/);
+            if (match && match[1]) {
+              console.log('从内容中提取职位标题:', match[1]);
+              jobInfo.value.title = match[1];
+            }
+          }
+        }
+        
+        // 如果仍然没有职位信息，查找其他消息
+        if (!jobInfo.value.title) {
+          console.log('在所有消息中寻找职位信息');
+          for (const msg of messages.value) {
+            if (msg.jobTitle) {
+              jobInfo.value.title = msg.jobTitle;
+              console.log('从消息中找到职位标题:', msg.jobTitle);
+              break;
+            }
+            if (msg.content && msg.content.includes('投递')) {
+              const match = msg.content.match(/投递"(.*?)"/);
+              if (match && match[1]) {
+                console.log('从内容中提取职位标题:', match[1]);
+                jobInfo.value.title = match[1];
+                break;
+              }
+            }
+          }
+        }
+        
+        // 从URL参数中获取
+        if (!jobInfo.value.title && route.query.jobTitle) {
+          console.log('从URL参数获取职位标题:', route.query.jobTitle);
+          jobInfo.value.title = route.query.jobTitle;
+        }
+        
+        // 如果存在jobInfo，确保在聊天头部显示
+        console.log('最终职位信息:', jobInfo.value);
         
         // 滚动到底部
         await nextTick();
@@ -338,6 +428,9 @@
       return;
     }
     
+    // 确保有职位信息
+    console.log('发送消息时的职位信息:', jobInfo.value);
+    
     const tempId = Date.now().toString();
     const tempMessage = {
       id: tempId,
@@ -346,7 +439,9 @@
       senderName: userInfo.value.name,
       senderRole: userInfo.value.role,
       createdAt: new Date().toISOString(),
-      status: 'sending'
+      status: 'sending',
+      jobTitle: jobInfo.value.title,
+      jobId: jobInfo.value.id
     };
     
     // 添加临时消息
@@ -364,11 +459,20 @@
     scrollToBottom();
     
     try {
+      console.log('发送消息到API:', {
+        content: content,
+        jobTitle: jobInfo.value.title,
+        jobId: jobInfo.value.id
+      });
+      
       const res = await sendMessageAPI(chatId, {
-        content: content
+        content: content,
+        jobTitle: jobInfo.value.title,
+        jobId: jobInfo.value.id
       });
       
       if (res.code === 200) {
+        console.log('消息发送成功，服务器响应:', res.data);
         // 确保返回的消息有createdAt属性
         const responseMessage = res.data;
         if (!responseMessage.createdAt) {
@@ -380,7 +484,9 @@
         if (index !== -1) {
           messages.value[index] = {
             ...responseMessage,
-            status: 'sent'
+            status: 'sent',
+            jobTitle: jobInfo.value.title,
+            jobId: jobInfo.value.id
           };
         }
       } else {
@@ -462,7 +568,7 @@
   
   // 检测消息是否包含简历链接
   const isResumeLink = (content) => {
-    return content && content.includes('这是我的简历，您可以查看')
+    return content && content.includes('简历，您可以查看')
   }
   
   function delay(ms) {
@@ -737,6 +843,12 @@
     font-size: 16px;
     font-weight: 500;
     color: #333;
+  }
+  
+  .chat-meta {
+    font-size: 12px;
+    color: #8f959e;
+    margin-top: 2px;
   }
   
   .chat-status {

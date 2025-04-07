@@ -17,6 +17,14 @@ export function getJobDetail(id) {
   })
 }
 
+// 根据职位ID获取公司信息
+export function getCompanyByJobId(id) {
+  return request({
+    url: `/jobs/${id}/company`,
+    method: 'get'
+  })
+}
+
 // 搜索职位
 export function searchJobs(params) {
   return request({
@@ -86,10 +94,32 @@ export function getConversationMessages(conversationId) {
   })
 }
 
+// 获取投递记录
+export function getApplications(params) {
+  return request({
+    url: '/jobs/applications',
+    method: 'get',
+    params: {
+      ...params,
+      includeJobInfo: true, // 包含职位信息
+      includeCompanyInfo: true // 包含公司信息
+    }
+  })
+}
+
+// 撤回投递
+export function withdrawApplication(applicationId) {
+  return request({
+    url: `/jobs/applications/${applicationId}/withdraw`,
+    method: 'put'
+  })
+}
+
 // 确保导出所有需要的函数
 export default {
   getJobs,
   getJobDetail,
+  getCompanyByJobId,
   searchJobs,
   getCompanyJobs,
   favoriteJob,
@@ -97,5 +127,7 @@ export default {
   getFavoriteStatus,
   getFavorites,
   applyJob,
-  getConversationMessages
+  getConversationMessages,
+  getApplications,
+  withdrawApplication
 }

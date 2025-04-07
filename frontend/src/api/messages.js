@@ -15,7 +15,9 @@ export function sendMessageAPI(conversationId, data) {
     url: `/conversations/${conversationId}/messages`,
     method: 'post',
     data: {
-      content: data.content
+      content: data.content,
+      jobTitle: data.jobTitle,
+      jobId: data.jobId
     }
   })
 } 

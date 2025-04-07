@@ -175,9 +175,8 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getUserProfile, getUserInfo } from '@/api/user'
-import { getFavorites } from '@/api/jobs'
+import { getFavorites, getApplications } from '@/api/jobs'
 import { useDialogStore } from '@/stores/dialog'
-import { getConversations } from '@/api/messages'
 import {
   Edit,
   User,
@@ -239,16 +238,15 @@ onMounted(async () => {
 
   // 获取投递记录数量
   try {
-    const res = await getConversations({
-      page: 1,
-      size: 1000,
-      type: 'student'
+    const res = await getApplications({
+      page: 0,
+      size: 1
     })
     if (res.code === 200) {
       deliveryCount.value = res.data.totalElements
     }
   } catch (error) {
-    console.error('获取投递记录数量失败:', error)
+    console.error('获取投递数量失败:', error)
   }
 })
 
@@ -261,7 +259,7 @@ const handleResume = () => {
 }
 
 const handleDeliveryRecord = () => {
-  router.push('/delivery-record')
+  router.push('/applications')
 }
 
 const handleFavorites = () => {

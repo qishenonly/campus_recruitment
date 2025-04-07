@@ -45,7 +45,10 @@
                   <span class="time">{{ formatTime(conversation.createTime) }}</span>
                 </div>
                 <div class="message-preview">
-                  <span class="preview-text">{{ conversation.content || '暂无消息' }}</span>
+                  <div class="preview-container">
+                    <span class="preview-text">{{ conversation.content || '暂无消息' }}</span>
+                    <span v-if="conversation.jobTitle" class="job-tag">{{ conversation.jobTitle }}</span>
+                  </div>
                   <div v-if="conversation.unreadCount" class="unread-count">
                     {{ conversation.unreadCount }}
                   </div>
@@ -83,6 +86,7 @@ import { zhCN } from 'date-fns/locale'
 import { getConversations } from '@/api/messages'
 import { formatTime } from '@/utils/format'
 import { getUserInfo } from '@/api/user'
+import { getCompanyByJobId } from '@/api/jobs'
 
 const router = useRouter()
 const route = useRoute()
@@ -198,19 +202,74 @@ const fetchUserInfo = async (id) => {
 // 获取会话列表
 const fetchConversations = async () => {
   try {
+    console.log('获取会话列表, 页码:', page.value, '类型:', currentTab.value)
     const res = await getConversations({
       page: page.value,
       size: pageSize,
       type: currentTab.value // 添加类型参数
     })
 
+    console.log('会话原始数据:', res.data)
     const newConversations = res.data.content || []
+    
+    // 处理每个对话，确保包含必要的信息
     for (const conv of newConversations) {
+      console.log('处理会话:', conv)
+      
       // 根据当前用户的角色判断需要获取 studentId 还是 companyId
       if (userRole === 'STUDENT') {
         conv.userId = conv.companyId;
       } else if (userRole === 'COMPANY') {
         conv.userId = conv.studentId;
+      }
+      
+      // 确保职位信息存在
+      if (!conv.jobTitle && conv.firstMessage) {
+        // 尝试从第一条消息中获取职位信息
+        conv.jobTitle = conv.firstMessage.jobTitle || '';
+        conv.jobId = conv.firstMessage.jobId || '';
+      }
+      
+      // 如果当前消息有职位信息，确保保留它
+      if (conv.content && conv.content.includes('职位') && !conv.jobTitle) {
+        // 尝试从消息内容中解析职位信息
+        const match = conv.content.match(/简历"(.*?)"/);
+        if (match && match[1]) {
+          conv.jobTitle = match[1];
+        }
+      }
+      
+      // 如果有职位ID但没有职位信息，尝试获取公司信息
+      if (conv.jobId && (!conv.jobTitle || conv.jobTitle === '')) {
+        try {
+          const response = await getCompanyByJobId(conv.jobId);
+          console.log(`获取职位ID=${conv.jobId}的信息:`, response);
+          if (response.code === 200 && response.data) {
+            // 更新聊天记录的公司和职位信息
+            if (response.data.company) {
+              if (!conv.companyName) {
+                conv.companyName = response.data.company.name;
+              }
+              if (!conv.companyLogo) {
+                conv.companyLogo = response.data.company.logo;
+              }
+            }
+            
+            // 更新职位信息
+            if (response.data.job) {
+              if (!conv.jobTitle) {
+                conv.jobTitle = response.data.job.title;
+              }
+            }
+            
+            // 如果没有职位标题，可以用"来自xx公司的职位"作为替代
+            if (!conv.jobTitle && response.data.company) {
+              conv.jobTitle = `来自${response.data.company.name}的职位`;
+            }
+          }
+        } catch (error) {
+          console.error(`获取职位ID=${conv.jobId}的信息失败:`, error);
+        }
       }
     }
 
@@ -263,7 +322,9 @@ const goToChat = (conversation) => {
     path: `/chat/${conversation.id}`,
     query: {
       companyName: userInfo?.username,
-      companyLogo: userInfo?.avatar
+      companyLogo: userInfo?.avatar,
+      jobTitle: conversation.jobTitle,
+      jobId: conversation.jobId
     }
   })
 }
@@ -276,21 +337,77 @@ const loadMore = async () => {
   page.value++
 
   try {
+    console.log('加载更多会话, 页码:', page.value, '类型:', currentTab.value)
     const res = await getConversations({
       page: page.value,
       size: pageSize,
       type: currentTab.value
     })
 
+    console.log('加载更多会话原始数据:', res.data)
     const newConversations = res.data.content || []
+    
+    // 处理每个对话，确保包含必要的信息
     for (const conv of newConversations) {
+      console.log('处理加载更多会话:', conv)
+      
       // 根据当前用户的角色判断需要获取 studentId 还是 companyId
       if (userRole === 'STUDENT') {
         conv.userId = conv.companyId;
       } else if (userRole === 'COMPANY') {
         conv.userId = conv.studentId;
       }
+      
+      // 确保职位信息存在
+      if (!conv.jobTitle && conv.firstMessage) {
+        // 尝试从第一条消息中获取职位信息
+        conv.jobTitle = conv.firstMessage.jobTitle || '';
+        conv.jobId = conv.firstMessage.jobId || '';
+      }
+      
+      // 如果当前消息有职位信息，确保保留它
+      if (conv.content && conv.content.includes('职位') && !conv.jobTitle) {
+        // 尝试从消息内容中解析职位信息
+        const match = conv.content.match(/简历"(.*?)"/);
+        if (match && match[1]) {
+          conv.jobTitle = match[1];
+        }
+      }
+      
+      // 如果有职位ID但没有职位信息，尝试获取公司信息
+      if (conv.jobId && (!conv.jobTitle || conv.jobTitle === '')) {
+        try {
+          const response = await getCompanyByJobId(conv.jobId);
+          console.log(`获取职位ID=${conv.jobId}的信息:`, response);
+          if (response.code === 200 && response.data) {
+            // 更新聊天记录的公司和职位信息
+            if (response.data.company) {
+              if (!conv.companyName) {
+                conv.companyName = response.data.company.name;
+              }
+              if (!conv.companyLogo) {
+                conv.companyLogo = response.data.company.logo;
+              }
+            }
+            
+            // 更新职位信息
+            if (response.data.job) {
+              if (!conv.jobTitle) {
+                conv.jobTitle = response.data.job.title;
+              }
+            }
+            
+            // 如果没有职位标题，可以用"来自xx公司的职位"作为替代
+            if (!conv.jobTitle && response.data.company) {
+              conv.jobTitle = `来自${response.data.company.name}的职位`;
+            }
+          }
+        } catch (error) {
+          console.error(`获取职位ID=${conv.jobId}的信息失败:`, error);
+        }
+      }
     }
+    
     // 获取所有新会话中的用户信息
     await Promise.all(
       newConversations.map(conv => {
@@ -462,30 +579,54 @@ const openChat = (chatId) => {
 
 .message-preview {
   display: flex;
+  margin-top: 4px;
   justify-content: space-between;
   align-items: center;
 }
 
+.preview-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+}
+
 .preview-text {
-  font-size: 14px;
   color: #666;
+  font-size: 14px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.job-tag {
+  background-color: #409EFF;
+  color: white;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
   white-space: nowrap;
-  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30%;
+  flex-shrink: 0;
 }
 
 .unread-count {
-  background: var(--primary-color);
+  background-color: #f56c6c;
   color: white;
-  font-size: 12px;
+  border-radius: 10px;
   min-width: 18px;
   height: 18px;
-  border-radius: 9px;
+  font-size: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+  padding: 0 4px;
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
 /* 添加动画效果 */

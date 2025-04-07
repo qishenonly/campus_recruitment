@@ -87,6 +87,16 @@ const routes = [
         meta: { title: '我的收藏' }
       },
       {
+        path: 'applications',
+        name: 'applications',
+        component: () => import('../views/mine/Applications.vue'),
+        meta: { 
+          title: '投递记录',
+          requireAuth: true,
+          roles: ['STUDENT']
+        }
+      },
+      {
         path: 'chat/:chatId',
         name: 'chat',
         component: () => import('../views/message/Chat.vue'),
@@ -159,6 +169,17 @@ const routes = [
         meta: { 
           title: '账号设置',
           requireAuth: true
+        }
+      },
+      // 学生账号设置
+      {
+        path: '/settings',
+        name: 'studentSettings',
+        component: () => import('../views/mine/StudentSettings.vue'),
+        meta: { 
+          title: '账号设置',
+          requireAuth: true,
+          roles: ['STUDENT']
         }
       }
     ]

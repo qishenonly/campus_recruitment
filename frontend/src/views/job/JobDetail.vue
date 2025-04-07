@@ -153,7 +153,10 @@ const jobId = computed(() => route.params.id)
 
 // 添加简历相关的状态
 const selectedResume = ref(null)
-const coverLetter = ref("您好，我对贵公司的职位很感兴趣，已投递简历，期待您的回复。") // 默认求职信
+// 修改默认求职信为动态生成
+const coverLetter = computed(() => {
+  return `您好，我对贵公司的"${jobInfo.value?.title || '该职位'}"职位很感兴趣，已投递简历，期待您的回复。`
+})
 
 const handleApply = async () => {
   try {
@@ -165,18 +168,32 @@ const handleApply = async () => {
       return
     }
 
+    console.log('投递职位：', jobInfo.value);
+    console.log('将要发送的职位信息：', {
+      jobTitle: jobInfo.value?.title,
+      jobId: jobId.value
+    });
+
     // 投递简历
     const res = await applyJob(jobId.value, resumeRes.data.id, coverLetter.value)
 
     if (res.code === 200) {
+      console.log('简历投递成功，返回数据：', res.data);
       // 获取会话 ID
       const conversationId = res.data.conversationId
       
-      // 发送带简历链接的消息
+      console.log('发送消息到会话：', conversationId, '职位信息：', {
+        jobTitle: jobInfo.value?.title,
+        jobId: jobId.value
+      });
+      
+      // 发送带简历链接的消息，添加职位名称
       await sendMessageAPI(conversationId, {
-        content: '这是我的简历，您可以查看',
+        content: `这是我投递"${jobInfo.value?.title || '该职位'}"的简历，您可以查看`,
         type: 'resume',
-        resumeId: resumeRes.data.id
+        resumeId: resumeRes.data.id,
+        jobTitle: jobInfo.value?.title, // 传递职位名称
+        jobId: jobId.value // 传递职位ID
       })
       
       showToast({
@@ -184,7 +201,13 @@ const handleApply = async () => {
         type: 'success'
       })
 
-      // 跳转到聊天页面
+      console.log('跳转到聊天页面，带参数：', {
+        chatId: res.data.conversation.id,
+        jobTitle: jobInfo.value?.title,
+        jobId: jobId.value
+      });
+
+      // 跳转到聊天页面，添加职位信息
       router.push({
         name: 'chat',
         params: {
@@ -193,7 +216,9 @@ const handleApply = async () => {
         query: {
           companyId: res.data.companyId,
           companyName: res.data.companyName,
-          companyLogo: jobInfo.value.companyLogo
+          companyLogo: jobInfo.value.companyLogo,
+          jobTitle: jobInfo.value?.title,
+          jobId: jobId.value
         }
       })
     }
