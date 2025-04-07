@@ -15,7 +15,7 @@ import javax.validation.Valid;
  * 管理员控制器
  */
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/api/admin")
 public class AdminController {
 
     @Autowired
@@ -33,7 +33,7 @@ public class AdminController {
 
     /**
      * 获取管理员信息
-     * @param request 请求
+     * @param request HTTP请求
      * @return 管理员信息
      */
     @GetMapping("/info")

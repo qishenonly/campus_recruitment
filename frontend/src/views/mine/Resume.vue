@@ -151,22 +151,23 @@ const initResume = async () => {
   })
 
   try {
-    // 修改 API 调用方式，直接获取二进制数据
+    // 获取PDF数据
     const response = await getResumePDF()
-    console.log('response :>> ', response);
+    console.log('response :>> ', response)
 
-
-    // 直接获取二进制数据
-    const arrayBuffer = response.data
-    const bytes = new Uint8Array(arrayBuffer)
-
-    if (bytes.length === 0) {
+    // 检查是否收到数据
+    if (!response || response.byteLength === 0) {
       hasPDF.value = false
+      loadingInstance.close()
       return
     }
 
-    // 加载 PDF 文档
-    pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise
+    // 处理arrayBuffer数据
+    // 不需要进行额外的二进制转换，直接使用ArrayBuffer
+    const pdfData = new Uint8Array(response)
+    
+    // 加载PDF文档
+    pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise
     totalPages.value = pdfDoc.numPages
     hasPDF.value = true
     
@@ -175,7 +176,7 @@ const initResume = async () => {
       name: '我的简历.pdf',
       type: 'application/pdf',
       uploadTime: new Date(),
-      size: bytes.length
+      size: pdfData.length
     }
     
     // 自动渲染第一页

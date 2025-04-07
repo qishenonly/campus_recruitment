@@ -2,7 +2,9 @@ package com.campus.service.impl;
 
 import com.campus.dto.CompanyInfoDTO;
 import com.campus.model.Company;
+import com.campus.model.TeamMember;
 import com.campus.repository.CompanyRepository;
+import com.campus.repository.TeamMemberRepository;
 import com.campus.service.CompanyInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class CompanyInfoServiceImpl implements CompanyInfoService {
 
     private final CompanyRepository companyRepository;
+    private final TeamMemberRepository teamMemberRepository;
     
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -34,9 +37,18 @@ public class CompanyInfoServiceImpl implements CompanyInfoService {
     private String accessPath;
 
     @Override
-    public CompanyInfoDTO getCompanyInfo(Long companyId) {
-        log.info("获取企业ID={}的信息", companyId);
+    public CompanyInfoDTO getCompanyInfo(Long userId) {
+        log.info("获取用户ID={}的企业信息", userId);
         
+        // 通过用户ID查找对应的团队成员
+        TeamMember teamMember = teamMemberRepository.findByUserId(userId)
+                .orElseThrow(() -> new NoSuchElementException("找不到该用户关联的企业信息"));
+        
+        // 获取团队成员所属的企业ID
+        Long companyId = teamMember.getCompanyId();
+        log.info("找到用户关联的企业ID={}", companyId);
+        
+        // 根据企业ID获取企业信息
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("企业信息不存在"));
         
@@ -44,9 +56,18 @@ public class CompanyInfoServiceImpl implements CompanyInfoService {
     }
 
     @Override
-    public CompanyInfoDTO updateCompanyInfo(Long companyId, CompanyInfoDTO companyInfoDTO) {
-        log.info("更新企业ID={}的信息", companyId);
+    public CompanyInfoDTO updateCompanyInfo(Long userId, CompanyInfoDTO companyInfoDTO) {
+        log.info("更新用户ID={}的企业信息", userId);
         
+        // 通过用户ID查找对应的团队成员
+        TeamMember teamMember = teamMemberRepository.findByUserId(userId)
+                .orElseThrow(() -> new NoSuchElementException("找不到该用户关联的企业信息"));
+        
+        // 获取团队成员所属的企业ID
+        Long companyId = teamMember.getCompanyId();
+        log.info("找到用户关联的企业ID={}", companyId);
+        
+        // 根据企业ID获取企业对象
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new NoSuchElementException("企业信息不存在"));
         
@@ -74,8 +95,16 @@ public class CompanyInfoServiceImpl implements CompanyInfoService {
     }
 
     @Override
-    public String uploadCompanyLogo(Long companyId, MultipartFile file) throws IOException {
-        log.info("上传企业ID={}的Logo", companyId);
+    public String uploadCompanyLogo(Long userId, MultipartFile file) throws IOException {
+        log.info("上传用户ID={}的企业Logo", userId);
+        
+        // 通过用户ID查找对应的团队成员
+        TeamMember teamMember = teamMemberRepository.findByUserId(userId)
+                .orElseThrow(() -> new NoSuchElementException("找不到该用户关联的企业信息"));
+        
+        // 获取团队成员所属的企业ID
+        Long companyId = teamMember.getCompanyId();
+        log.info("找到用户关联的企业ID={}", companyId);
         
         // 检查公司是否存在
         Company company = companyRepository.findById(companyId)

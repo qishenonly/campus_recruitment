@@ -17,7 +17,7 @@ import java.util.Map;
  * 企业管理控制器
  */
 @RestController
-@RequestMapping("/admin/companies")
+@RequestMapping("/api/admin/companies")
 public class AdminCompanyController {
 
     @Autowired

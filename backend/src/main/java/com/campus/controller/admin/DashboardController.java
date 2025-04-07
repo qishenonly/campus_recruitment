@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
  * 仪表盘控制器
  */
 @RestController
-@RequestMapping("/admin/dashboard")
+@RequestMapping("/api/admin/dashboard")
 public class DashboardController {
 
     @Autowired

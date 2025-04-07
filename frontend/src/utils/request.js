@@ -25,7 +25,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   response => {
     // 如果是下载文件类型，直接返回
-    if (response.config.responseType === 'blob') {
+    if (response.config.responseType === 'blob' || response.config.responseType === 'arraybuffer') {
       return response.data
     }
     
@@ -56,6 +56,22 @@ service.interceptors.response.use(
   },
   error => {
     console.error('响应错误:', error)
+    
+    // 检查是否是序列化错误（常见于循环引用）
+    if (error.response?.data?.message && 
+        (error.response.data.message.includes('Infinite recursion') ||
+         error.response.data.message.includes('CircularReference') ||
+         error.response.data.message.includes('StackOverflowError'))) {
+      console.error('后端序列化错误:', error.response.data)
+      ElMessage({
+        message: '服务器数据处理错误，可能存在循环引用问题，请联系管理员',
+        type: 'error',
+        duration: 3000
+      })
+      // 返回空数据，避免前端崩溃
+      return Promise.resolve({ data: [] })
+    }
+    
     // 获取更具体的错误信息
     const errorMessage = error.response?.data?.message || 
                          error.response?.data?.error || 
@@ -80,6 +96,13 @@ service.interceptors.response.use(
       type: 'error',
       duration: 2000
     })
+    
+    // 对于常见的服务器错误，返回空数据，让前端可以继续运行
+    if (error.response && error.response.status >= 500) {
+      console.warn('服务器错误，返回空数据')
+      return Promise.resolve({ data: [] })
+    }
+    
     return Promise.reject(error)
   }
 )

@@ -172,8 +172,26 @@ const handleSearch = async () => {
       params.education = education.value
     }
     const result = await searchJobs(params)
-    jobs.value = result.data.content
-    totalJobs.value = result.data.totalElements
+    console.log("处理后的搜索结果:", result)
+    
+    // 使用与 fetchJobs 相同的逻辑处理数据
+    if (result && result.data) {
+      // 检查数据是否是数组或有 content 属性
+      if (Array.isArray(result.data)) {
+        jobs.value = result.data
+        totalJobs.value = result.data.length
+      } else if (result.data.content) {
+        jobs.value = result.data.content
+        totalJobs.value = result.data.totalElements || result.data.content.length
+      } else {
+        jobs.value = [result.data]  // 单个对象包装为数组
+        totalJobs.value = 1
+      }
+    } else {
+      // 安全后备值
+      jobs.value = []
+      totalJobs.value = 0
+    }
   } catch (error) {
     console.error('搜索职位失败:', error)
     showToast('搜索职位失败，请稍后重试')
@@ -198,9 +216,28 @@ const fetchJobs = async () => {
   loading.value = true
   try {
     const result = await getJobs()
-    console.log(result)
-    jobs.value = result.data.content
-    totalJobs.value = result.data.totalElements
+    console.log("处理后的API响应结果:", result)
+    
+    // 由于在 API 中已经标准化了格式，这里应该有可靠的 result.data
+    if (result && result.data) {
+      // 检查数据是否是数组或有 content 属性
+      if (Array.isArray(result.data)) {
+        jobs.value = result.data
+        totalJobs.value = result.data.length
+      } else if (result.data.content) {
+        jobs.value = result.data.content
+        totalJobs.value = result.data.totalElements || result.data.content.length
+      } else {
+        jobs.value = [result.data]  // 单个对象包装为数组
+        totalJobs.value = 1
+      }
+    } else {
+      // 安全后备值
+      jobs.value = []
+      totalJobs.value = 0
+    }
+    
+    console.log("最终职位数据:", jobs.value)
   } catch (error) {
     console.error('获取职位列表失败:', error)
     showToast('获取职位列表失败，请稍后重试')

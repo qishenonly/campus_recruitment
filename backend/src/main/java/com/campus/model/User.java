@@ -1,8 +1,11 @@
 package com.campus.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -43,6 +46,11 @@ public class User {
     @Column(name = "update_time")
     private LocalDateTime updateTime;
     
+    // 一个用户可以是多个团队的成员
+    @JsonManagedReference
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TeamMember> teamMembers = new ArrayList<>();
+    
     public enum UserRole {
         STUDENT, COMPANY, ADMIN
     }
@@ -53,5 +61,16 @@ public class User {
 
     public UserRole getRole() {
         return role;
+    }
+    
+    // 添加和移除团队成员的便捷方法
+    public void addTeamMember(TeamMember member) {
+        teamMembers.add(member);
+        member.setUser(this);
+    }
+    
+    public void removeTeamMember(TeamMember member) {
+        teamMembers.remove(member);
+        member.setUser(null);
     }
 } 

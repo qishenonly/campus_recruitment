@@ -1,5 +1,7 @@
 package com.campus.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -12,8 +14,10 @@ public class TeamMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
-    private Long companyId; // 所属公司ID
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id", nullable = false)
+    private Company company;
     
     @Column(nullable = false)
     private String name; // 姓名
@@ -31,11 +35,26 @@ public class TeamMember {
     
     private String username; // 登录用户名
     
-    private Long userId; // 关联的用户ID，如果有登录账号
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user; // 关联的用户，如果有登录账号
     
     @Column(name = "create_time")
     private LocalDateTime createTime = LocalDateTime.now();
     
     @Column(name = "update_time")
     private LocalDateTime updateTime = LocalDateTime.now();
+    
+    public Long getCompanyId() {
+        return company != null ? company.getId() : null;
+    }
+    
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
+    
+    public void setUserId(Long userId) {
+        // 此方法留空，使用 setUser 方法替代
+    }
 } 

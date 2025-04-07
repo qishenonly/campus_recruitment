@@ -16,7 +16,7 @@ import java.util.List;
  * 学生管理控制器
  */
 @RestController
-@RequestMapping("/admin/students")
+@RequestMapping("/api/admin/students")
 public class AdminStudentController {
 
     @Autowired

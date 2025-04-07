@@ -5,6 +5,7 @@ import com.campus.dto.JobDTO;
 import com.campus.dto.PageDTO;
 import com.campus.dto.ResponseDTO;
 import com.campus.model.Company;
+import com.campus.model.TeamMember;
 import com.campus.model.User;
 import com.campus.repository.CompanyRepository;
 import com.campus.repository.JobRepository;
@@ -131,21 +132,28 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
                     }
                     
                     if (status != null && !status.isEmpty()) {
-                        match = match && company.getUser() != null && 
-                                company.getUser().getStatus().name().equals(status);
+                        // 查找管理员成员及其关联的用户
+                        TeamMember adminMember = company.getTeamMembers().stream()
+                                .filter(member -> "admin".equals(member.getRole()))
+                                .findFirst()
+                                .orElse(null);
+                        
+                        if (adminMember != null && adminMember.getUser() != null) {
+                            match = match && adminMember.getUser().getStatus().name().equals(status);
+                        } else {
+                            match = false; // 没有管理员或用户，不符合状态筛选条件
+                        }
                     }
                     
                     // 日期时间筛选
                     if (finalStart != null) {
-                        match = match && company.getUser() != null && 
-                                company.getUser().getCreateTime() != null &&
-                                company.getUser().getCreateTime().isAfter(finalStart);
+                        match = match && company.getCreateTime() != null &&
+                                company.getCreateTime().isAfter(finalStart);
                     }
                     
                     if (finalEnd != null) {
-                        match = match && company.getUser() != null && 
-                                company.getUser().getCreateTime() != null &&
-                                company.getUser().getCreateTime().isBefore(finalEnd);
+                        match = match && company.getCreateTime() != null &&
+                                company.getCreateTime().isBefore(finalEnd);
                     }
                     
                     return match;
@@ -175,33 +183,65 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
     @Override
     @Transactional
     public ResponseDTO<Long> addCompany(CompanyDTO companyDTO) {
-        // 创建用户
-        User user = new User();
-        user.setUsername(companyDTO.getEmail());
-        user.setEmail(companyDTO.getEmail());
-        user.setPhone(companyDTO.getPhone());
-        user.setRealName(companyDTO.getName());
-        user.setPassword("123456"); // 初始密码
-        user.setRole(User.UserRole.COMPANY);
-        user.setStatus(User.UserStatus.ACTIVE);
-        user.setCreateTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
-        
-        User savedUser = userRepository.save(user);
-        
         // 创建企业
         Company company = new Company();
-        company.setId(savedUser.getId());
         company.setCompanyName(companyDTO.getName());
         company.setIndustry(companyDTO.getIndustry());
         company.setScale(companyDTO.getScale());
         company.setCity(companyDTO.getLocation());
         company.setContactPerson(companyDTO.getContactPerson());
         company.setContactPosition("HR"); // 默认职位
-        company.setUser(savedUser);
         company.setVerified(false);
+        company.setCreateTime(LocalDateTime.now());
+        company.setUpdateTime(LocalDateTime.now());
         
         Company savedCompany = companyRepository.save(company);
+        
+        // 创建一个管理员团队成员
+        if (companyDTO.getEmail() != null && !companyDTO.getEmail().isEmpty()) {
+            TeamMember adminMember = new TeamMember();
+            adminMember.setCompany(savedCompany);
+            adminMember.setName(companyDTO.getContactPerson() != null ? companyDTO.getContactPerson() : "管理员");
+            adminMember.setPosition("HR");
+            adminMember.setEmail(companyDTO.getEmail());
+            adminMember.setPhone(companyDTO.getPhone());
+            adminMember.setRole("admin");
+            adminMember.setCreateTime(LocalDateTime.now());
+            adminMember.setUpdateTime(LocalDateTime.now());
+            
+            // 检查用户是否已存在
+            User user;
+            boolean userExists = userRepository.existsByEmail(companyDTO.getEmail());
+            
+            if (userExists) {
+                // 如果存在，使用现有用户
+                user = userRepository.findByEmail(companyDTO.getEmail());
+                if (user == null) {
+                    throw new RuntimeException("查找用户发生错误");
+                }
+            } else {
+                // 如果不存在，创建新用户
+                user = new User();
+                user.setUsername(companyDTO.getEmail());
+                user.setEmail(companyDTO.getEmail());
+                user.setPhone(companyDTO.getPhone());
+                user.setRealName(adminMember.getName());
+                user.setPassword("123456"); // 初始密码
+                user.setRole(User.UserRole.COMPANY);
+                user.setStatus(User.UserStatus.ACTIVE);
+                user.setCreateTime(LocalDateTime.now());
+                user.setUpdateTime(LocalDateTime.now());
+                
+                user = userRepository.save(user);
+            }
+            
+            adminMember.setUser(user);
+            adminMember.setUsername(user.getUsername());
+            
+            // 将团队成员添加到企业
+            savedCompany.addTeamMember(adminMember);
+            savedCompany = companyRepository.save(savedCompany);
+        }
         
         return ResponseDTO.success(savedCompany.getId());
     }
@@ -211,20 +251,6 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
     public ResponseDTO<Void> updateCompany(Long id, CompanyDTO companyDTO) {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("企业不存在"));
-        
-        User user = company.getUser();
-        
-        // 更新用户信息
-        if (companyDTO.getEmail() != null) {
-            user.setEmail(companyDTO.getEmail());
-        }
-        
-        if (companyDTO.getPhone() != null) {
-            user.setPhone(companyDTO.getPhone());
-        }
-        
-        user.setUpdateTime(LocalDateTime.now());
-        userRepository.save(user);
         
         // 更新企业信息
         if (companyDTO.getName() != null) {
@@ -247,6 +273,7 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
             company.setContactPerson(companyDTO.getContactPerson());
         }
         
+        company.setUpdateTime(LocalDateTime.now());
         companyRepository.save(company);
         
         return ResponseDTO.success();
@@ -258,24 +285,32 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("企业不存在"));
         
-        if (company.getUser() == null) {
-            return ResponseDTO.error("企业账号不存在");
+        // 查找管理员成员及其关联的用户
+        TeamMember adminMember = company.getTeamMembers().stream()
+                .filter(member -> "admin".equals(member.getRole()))
+                .findFirst()
+                .orElse(null);
+        
+        if (adminMember == null || adminMember.getUser() == null) {
+            return ResponseDTO.error("企业管理员账号不存在");
         }
+        
+        User user = adminMember.getUser();
         
         if (status.equals("ACTIVE")) {
             company.setVerified(true);
-            company.getUser().setStatus(User.UserStatus.ACTIVE);
+            user.setStatus(User.UserStatus.ACTIVE);
         } else if (status.equals("INACTIVE")) {
             company.setVerified(false);
-            company.getUser().setStatus(User.UserStatus.INACTIVE);
+            user.setStatus(User.UserStatus.INACTIVE);
         } else if (status.equals("BLOCKED")) {
-            company.getUser().setStatus(User.UserStatus.BLOCKED);
+            user.setStatus(User.UserStatus.BLOCKED);
         } else {
             return ResponseDTO.error("无效的状态");
         }
         
         companyRepository.save(company);
-        userRepository.save(company.getUser());
+        userRepository.save(user);
         
         return ResponseDTO.success();
     }
@@ -286,9 +321,17 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("企业不存在"));
         
-        User user = company.getUser();
-        user.setStatus(User.UserStatus.BLOCKED);
-        userRepository.save(user);
+        // 查找管理员成员及其关联的用户
+        TeamMember adminMember = company.getTeamMembers().stream()
+                .filter(member -> "admin".equals(member.getRole()))
+                .findFirst()
+                .orElse(null);
+        
+        if (adminMember != null && adminMember.getUser() != null) {
+            User user = adminMember.getUser();
+            user.setStatus(User.UserStatus.BLOCKED);
+            userRepository.save(user);
+        }
         
         return ResponseDTO.success();
     }
@@ -299,9 +342,17 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
         Company company = companyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("企业不存在"));
         
-        User user = company.getUser();
-        user.setStatus(User.UserStatus.ACTIVE);
-        userRepository.save(user);
+        // 查找管理员成员及其关联的用户
+        TeamMember adminMember = company.getTeamMembers().stream()
+                .filter(member -> "admin".equals(member.getRole()))
+                .findFirst()
+                .orElse(null);
+        
+        if (adminMember != null && adminMember.getUser() != null) {
+            User user = adminMember.getUser();
+            user.setStatus(User.UserStatus.ACTIVE);
+            userRepository.save(user);
+        }
         
         return ResponseDTO.success();
     }
@@ -309,13 +360,28 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
     @Override
     @Transactional
     public ResponseDTO<Void> deleteCompany(Long id) {
-        // 根据业务需求，可能需要先删除关联的职位、申请等数据
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("企业不存在"));
         
-        // 删除企业
+        // 查找所有的团队成员及其关联的用户
+        List<TeamMember> teamMembers = company.getTeamMembers();
+        List<Long> userIds = teamMembers.stream()
+                .filter(member -> member.getUser() != null)
+                .map(member -> member.getUser().getId())
+                .collect(Collectors.toList());
+        
+        // 删除企业（会级联删除团队成员）
         companyRepository.deleteById(id);
         
-        // 删除用户
-        userRepository.deleteById(id);
+        // 删除关联的用户账号
+        for (Long userId : userIds) {
+            try {
+                userRepository.deleteById(userId);
+            } catch (Exception e) {
+                // 记录错误但继续执行
+                System.err.println("删除用户ID: " + userId + " 出错: " + e.getMessage());
+            }
+        }
         
         return ResponseDTO.success();
     }
@@ -408,13 +474,21 @@ public class AdminCompanyServiceImpl implements AdminCompanyService {
         companyDTO.setLocation(company.getCity());
         companyDTO.setContactPerson(company.getContactPerson());
         
-        // 获取关联的用户信息
-        User user = company.getUser();
-        if (user != null) {
+        // 查找管理员成员
+        TeamMember adminMember = company.getTeamMembers().stream()
+                .filter(member -> "admin".equals(member.getRole()))
+                .findFirst()
+                .orElse(null);
+        
+        if (adminMember != null && adminMember.getUser() != null) {
+            User user = adminMember.getUser();
             companyDTO.setEmail(user.getEmail());
             companyDTO.setPhone(user.getPhone());
             companyDTO.setStatus(user.getStatus().name());
             companyDTO.setRegisterTime(user.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        } else {
+            // 如果没有管理员成员，使用企业的创建时间
+            companyDTO.setRegisterTime(company.getCreateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
         
         // 获取职位数量

@@ -1,12 +1,14 @@
 package com.campus.controller;
 
 import com.campus.model.Job;
+import com.campus.model.Company;
 import com.campus.service.JobService;
 import com.campus.dto.JobDTO;
 import com.campus.dto.CompanyInfoDTO;
 import com.campus.util.JwtUtil;
 import com.campus.service.CompanyService;
 import com.campus.service.CompanyInfoService;
+import com.campus.repository.CompanyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Arrays;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -25,6 +28,9 @@ public class JobController {
     
     @Autowired
     private CompanyInfoService companyInfoService;
+    
+    @Autowired
+    private CompanyRepository companyRepository;
 
     // 获取职位列表（分页）
     @GetMapping
@@ -47,8 +53,12 @@ public class JobController {
             // 获取职位所属的公司ID
             Long companyId = jobService.getCompanyIdByJobId(id);
             
-            // 获取公司详细信息
-            CompanyInfoDTO companyInfo = companyInfoService.getCompanyInfo(companyId);
+            // 获取公司详细信息 - 直接按公司ID查询，不再使用用户ID
+            Company company = companyRepository.findById(companyId)
+                    .orElseThrow(() -> new RuntimeException("找不到该公司信息"));
+                    
+            // 将公司实体转换为DTO
+            CompanyInfoDTO companyInfo = convertToCompanyInfoDTO(company);
             
             // 获取职位详细信息
             JobDTO jobInfo = jobService.findByIdWithCompany(id)
@@ -71,6 +81,32 @@ public class JobController {
             
             return ResponseEntity.status(500).body(errorResponse);
         }
+    }
+    
+    /**
+     * 将Company实体转换为CompanyInfoDTO
+     */
+    private CompanyInfoDTO convertToCompanyInfoDTO(Company company) {
+        CompanyInfoDTO dto = new CompanyInfoDTO();
+        dto.setId(company.getId());
+        dto.setName(company.getCompanyName());
+        dto.setDescription(company.getDescription());
+        dto.setLogo(company.getLogo());
+        
+        // 城市处理
+        if (company.getCity() != null) {
+            dto.setCity(Arrays.asList(company.getCity()));
+        }
+        
+        dto.setAddress(company.getAddress());
+        dto.setSize(company.getScale());
+        dto.setIndustry(company.getIndustry());
+        dto.setFinancingStage(company.getFinancingStage());
+        dto.setWebsite(company.getWebsite());
+        dto.setContactPerson(company.getContactPerson());
+        dto.setContactPosition(company.getContactPosition());
+        
+        return dto;
     }
 
     // 搜索职位

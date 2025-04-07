@@ -61,4 +61,19 @@ public class CompanyDTO {
      * 账号状态
      */
     private String status;
+    
+    /**
+     * 企业描述
+     */
+    private String description;
+    
+    /**
+     * 是否已认证
+     */
+    private Boolean verified;
+    
+    /**
+     * 企业Logo
+     */
+    private String logo;
 } 

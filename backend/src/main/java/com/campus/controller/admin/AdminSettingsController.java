@@ -14,7 +14,7 @@ import java.util.Map;
  * 系统设置控制器
  */
 @RestController
-@RequestMapping("/admin/settings")
+@RequestMapping("/api/admin/settings")
 public class AdminSettingsController {
 
     @Autowired

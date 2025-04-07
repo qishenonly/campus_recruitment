@@ -1,7 +1,10 @@
 package com.campus.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 import javax.persistence.*;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -9,7 +12,8 @@ import java.util.List;
 @Table(name = "companies")
 public class Company {
     @Id
-    private Long id;  // 关联User表的id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
     
     @Column(nullable = false)
     private String companyName;
@@ -38,12 +42,26 @@ public class Company {
     private String contactPosition;
     
     private String financingStage; // 融资阶段
-
-    @OneToOne
-    @MapsId
-    @JoinColumn(name = "id")
-    private User user;
     
-    @Transient
-    private List<TeamMember> teamMembers;
+    @Column(name = "create_time")
+    private LocalDateTime createTime = LocalDateTime.now();
+    
+    @Column(name = "update_time")
+    private LocalDateTime updateTime = LocalDateTime.now();
+
+    // 一个企业可以有多个团队成员
+    @JsonManagedReference
+    @OneToMany(mappedBy = "company", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TeamMember> teamMembers = new ArrayList<>();
+    
+    // 添加和移除团队成员的便捷方法
+    public void addTeamMember(TeamMember member) {
+        teamMembers.add(member);
+        member.setCompany(this);
+    }
+    
+    public void removeTeamMember(TeamMember member) {
+        teamMembers.remove(member);
+        member.setCompany(null);
+    }
 } 

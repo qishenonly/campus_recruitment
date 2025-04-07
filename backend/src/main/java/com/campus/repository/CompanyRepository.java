@@ -26,7 +26,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
      * @param dateTime 指定日期
      * @return 企业数量
      */
-    @Query("SELECT COUNT(c) FROM Company c JOIN c.user u WHERE u.createTime < :dateTime")
+    @Query("SELECT COUNT(c) FROM Company c WHERE c.createTime < :dateTime")
     long countByCreateTimeBefore(@Param("dateTime") LocalDateTime dateTime);
     
     /**
@@ -35,6 +35,15 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
      * @param endDateTime 结束日期
      * @return 企业数量
      */
-    @Query("SELECT COUNT(c) FROM Company c JOIN c.user u WHERE u.createTime >= :startDateTime AND u.createTime < :endDateTime")
+    @Query("SELECT COUNT(c) FROM Company c WHERE c.createTime >= :startDateTime AND c.createTime < :endDateTime")
     long countByCreateTimeBetween(@Param("startDateTime") LocalDateTime startDateTime, @Param("endDateTime") LocalDateTime endDateTime);
+    
+    /**
+     * 查找拥有特定管理员角色的企业
+     * @param userRole 用户角色
+     * @param pageable 分页参数
+     * @return 企业分页结果
+     */
+    @Query("SELECT DISTINCT c FROM Company c JOIN c.teamMembers tm JOIN tm.user u WHERE u.role = :userRole AND tm.role = 'admin'")
+    Page<Company> findByAdminUserRole(@Param("userRole") String userRole, Pageable pageable);
 } 

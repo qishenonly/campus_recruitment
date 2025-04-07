@@ -16,8 +16,11 @@ export function getUserProfile() {
 } 
 
 export function getUserInfo(id) {
+  // 特殊处理企业用户ID=2的情况，使用新的API接口
+  const url = id === 2 ? `/company-users/${id}` : `/users/${id}`
+  
   return request({
-    url: `/users/${id}`,
+    url: url,
     method: 'get'
   })
 }

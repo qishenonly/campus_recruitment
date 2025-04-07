@@ -41,13 +41,13 @@
               </div>
               <div class="content">
                 <div class="header">
-                  <span class="company-name">{{ conversation.userInfo?.username || '未知用户' }}</span>
+                  <span class="company-name">{{ conversation.publisherName + ' [' + conversation.publisherPosition + ']' || '未知用户' }}</span>
                   <span class="time">{{ formatTime(conversation.createTime) }}</span>
                 </div>
                 <div class="message-preview">
                   <div class="preview-container">
                     <span class="preview-text">{{ conversation.content || '暂无消息' }}</span>
-                    <span v-if="conversation.jobTitle" class="job-tag">{{ conversation.jobTitle }}</span>
+                    <span v-if="conversation.jobTitle" class="job-tag">{{ conversation.jobTitle + ' [' + conversation.companyName + '] ' }}</span>
                   </div>
                   <div v-if="conversation.unreadCount" class="unread-count">
                     {{ conversation.unreadCount }}
@@ -277,7 +277,7 @@ const fetchConversations = async () => {
     await Promise.all(
       newConversations.map(conv => {
         if(conv.userId){
-          fetchUserInfo(conv.userId)
+          fetchUserInfo(conv.publisherId)
         }
       })
     )
@@ -412,7 +412,7 @@ const loadMore = async () => {
     await Promise.all(
       newConversations.map(conv => {
         if(conv.userId){
-          fetchUserInfo(conv.userId)
+          fetchUserInfo(conv.publisherId)
         }
       })
     )
