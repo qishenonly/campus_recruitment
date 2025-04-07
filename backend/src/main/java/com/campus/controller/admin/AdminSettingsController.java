@@ -1,5 +1,6 @@
 package com.campus.controller.admin;
 
+import com.campus.annotation.OperationLog;
 import com.campus.dto.ResponseDTO;
 import com.campus.dto.SystemSettingDTO;
 import com.campus.service.AdminSettingsService;
@@ -35,6 +36,7 @@ public class AdminSettingsController {
      * @return 更新结果
      */
     @PutMapping
+    @OperationLog(operationType = "系统设置", description = "更新所有系统设置")
     public ResponseDTO<Void> updateAllSettings(@RequestBody Map<String, Object> settings) {
         return adminSettingsService.updateAllSettings(settings);
     }
@@ -54,6 +56,7 @@ public class AdminSettingsController {
      * @return 更新结果
      */
     @PutMapping("/basic")
+    @OperationLog(operationType = "系统设置", description = "更新基本设置")
     public ResponseDTO<Void> updateBasicSettings(@RequestBody Map<String, Object> settings) {
         return adminSettingsService.updateBasicSettings(settings);
     }
@@ -64,6 +67,7 @@ public class AdminSettingsController {
      * @return 上传结果
      */
     @PostMapping("/logo")
+    @OperationLog(operationType = "系统设置", description = "上传系统LOGO")
     public ResponseDTO<String> uploadLogo(@RequestParam("file") MultipartFile file) {
         return adminSettingsService.uploadLogo(file);
     }
@@ -121,6 +125,7 @@ public class AdminSettingsController {
      * @return 操作结果
      */
     @PutMapping("/maintenance")
+    @OperationLog(operationType = "系统设置", description = "切换系统维护模式")
     public ResponseDTO<Void> toggleMaintenanceMode(@RequestParam("enable") Boolean enable) {
         return adminSettingsService.toggleMaintenanceMode(enable);
     }
@@ -162,6 +167,7 @@ public class AdminSettingsController {
      * @return 清理结果
      */
     @PostMapping("/cache/clear")
+    @OperationLog(operationType = "系统设置", description = "清理系统缓存")
     public ResponseDTO<Void> clearSystemCache() {
         return adminSettingsService.clearSystemCache();
     }
@@ -172,6 +178,7 @@ public class AdminSettingsController {
      * @return 重置结果
      */
     @PostMapping("/reset")
+    @OperationLog(operationType = "系统设置", description = "重置系统")
     public ResponseDTO<Void> resetSystem(@RequestParam("confirmation") String confirmation) {
         return adminSettingsService.resetSystem(confirmation);
     }

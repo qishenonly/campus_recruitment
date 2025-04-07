@@ -1,19 +1,32 @@
 package com.campus.controller.admin;
 
 import com.campus.dto.ResponseDTO;
+import com.campus.dto.SystemLogDTO;
+import com.campus.model.SystemLog;
 import com.campus.service.AdminDashboardService;
+import com.campus.service.SystemLogService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 仪表盘控制器
  */
 @RestController
 @RequestMapping("/api/admin/dashboard")
+@Slf4j
 public class DashboardController {
 
     @Autowired
     private AdminDashboardService adminDashboardService;
+
+    @Autowired
+    private SystemLogService systemLogService;
 
     /**
      * 获取基础统计数据
@@ -119,6 +132,22 @@ public class DashboardController {
     @GetMapping("/recent-logs")
     public ResponseDTO<?> getRecentLogs(
             @RequestParam(value = "limit", defaultValue = "10") Integer limit) {
-        return adminDashboardService.getRecentLogs(limit);
+        try {
+            List<SystemLog> originalLogs = systemLogService.getRecentLogs(limit);
+            
+            // 将日志实体转换为DTO
+            List<SystemLogDTO> formattedLogs = originalLogs.stream()
+                    .map(SystemLogDTO::fromEntity)
+                    .collect(Collectors.toList());
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("total", formattedLogs.size());
+            result.put("logs", formattedLogs);
+            
+            return ResponseDTO.success(result);
+        } catch (Exception e) {
+            log.error("获取最近操作日志失败: {}", e.getMessage(), e);
+            return ResponseDTO.error("获取最近操作日志失败");
+        }
     }
 } 

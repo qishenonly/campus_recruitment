@@ -1,5 +1,6 @@
 package com.campus.controller.admin;
 
+import com.campus.annotation.OperationLog;
 import com.campus.dto.PageDTO;
 import com.campus.dto.ResponseDTO;
 import com.campus.dto.StudentDTO;
@@ -60,6 +61,7 @@ public class AdminStudentController {
      * @return 更新结果
      */
     @PutMapping("/{id}")
+    @OperationLog(operationType = "学生管理", description = "更新学生信息")
     public ResponseDTO<Void> updateStudent(
             @PathVariable Long id, 
             @RequestBody @Valid StudentDTO studentDTO) {
@@ -72,6 +74,7 @@ public class AdminStudentController {
      * @return 操作结果
      */
     @PostMapping("/{id}/verify")
+    @OperationLog(operationType = "学生管理", description = "认证学生")
     public ResponseDTO<Void> verifyStudent(@PathVariable Long id) {
         return adminStudentService.verifyStudent(id);
     }
@@ -82,6 +85,7 @@ public class AdminStudentController {
      * @return 操作结果
      */
     @PostMapping("/{id}/disable")
+    @OperationLog(operationType = "学生管理", description = "禁用学生账号")
     public ResponseDTO<Void> disableStudent(@PathVariable Long id) {
         return adminStudentService.disableStudent(id);
     }
@@ -92,6 +96,7 @@ public class AdminStudentController {
      * @return 操作结果
      */
     @PostMapping("/{id}/enable")
+    @OperationLog(operationType = "学生管理", description = "启用学生账号")
     public ResponseDTO<Void> enableStudent(@PathVariable Long id) {
         return adminStudentService.enableStudent(id);
     }
@@ -102,6 +107,7 @@ public class AdminStudentController {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
+    @OperationLog(operationType = "学生管理", description = "删除学生")
     public ResponseDTO<Void> deleteStudent(@PathVariable Long id) {
         return adminStudentService.deleteStudent(id);
     }
@@ -112,6 +118,7 @@ public class AdminStudentController {
      * @return 操作结果
      */
     @PostMapping("/{id}/reset-password")
+    @OperationLog(operationType = "学生管理", description = "重置学生密码")
     public ResponseDTO<String> resetPassword(@PathVariable Long id) {
         return adminStudentService.resetPassword(id);
     }

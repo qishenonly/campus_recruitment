@@ -70,7 +70,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { adminLogin } from '../../api/admin';
+import { adminLogin, getAdminInfo } from '../../api/admin';
 
 const router = useRouter();
 const loading = ref(false);
@@ -115,11 +115,18 @@ const handleLogin = () => {
           localStorage.removeItem('adminRemember');
         }
         
-        // 获取管理员信息和跳转将在router.beforeEach中处理
+        // 获取管理员信息
+        return getAdminInfo();
+      }).then(adminInfoRes => {
+        // 存储管理员信息
+        localStorage.setItem('adminInfo', JSON.stringify(adminInfoRes.data));
+        
+        // 登录成功提示和跳转
         ElMessage.success('登录成功');
         router.push('/admin/dashboard');
       }).catch(error => {
         console.error('登录失败:', error);
+        ElMessage.error(error.message || '登录失败，请重试');
       }).finally(() => {
         loading.value = false;
       });

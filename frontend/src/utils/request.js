@@ -9,10 +9,21 @@ const service = axios.create({
 // 请求拦截器
 service.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`
+    // 根据请求的URL决定使用哪种token
+    if (config.url.includes('/admin/')) {
+      // 管理员接口使用adminToken
+      const adminToken = localStorage.getItem('adminToken')
+      if (adminToken) {
+        config.headers['Authorization'] = `Bearer ${adminToken}`
+      }
+    } else {
+      // 普通用户接口使用token
+      const token = localStorage.getItem('token')
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`
+      }
     }
+    
     return config
   },
   error => {
@@ -38,10 +49,22 @@ service.interceptors.response.use(
           type: 'error',
           duration: 2000
         })
-        localStorage.removeItem('token')
-        setTimeout(() => {
-          window.location.href = '/admin/login'
-        }, 1500)
+        
+        // 根据当前页面判断是管理员还是普通用户
+        if (window.location.pathname.includes('/admin')) {
+          localStorage.removeItem('adminToken')
+          localStorage.removeItem('adminInfo')
+          setTimeout(() => {
+            window.location.href = '/admin/login'
+          }, 1500)
+        } else {
+          localStorage.removeItem('token')
+          localStorage.removeItem('userInfo')
+          setTimeout(() => {
+            window.location.href = '/login'
+          }, 1500)
+        }
+        
         return Promise.reject(new Error(res.message || '登录已过期'))
       }
       
@@ -85,10 +108,20 @@ service.interceptors.response.use(
     
     // 处理401未授权错误
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token')
-      setTimeout(() => {
-        window.location.href = '/admin/login'
-      }, 1500)
+      // 根据当前页面判断是管理员还是普通用户
+      if (window.location.pathname.includes('/admin')) {
+        localStorage.removeItem('adminToken')
+        localStorage.removeItem('adminInfo')
+        setTimeout(() => {
+          window.location.href = '/admin/login'
+        }, 1500)
+      } else {
+        localStorage.removeItem('token')
+        localStorage.removeItem('userInfo')
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 1500)
+      }
     }
     
     ElMessage({

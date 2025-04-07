@@ -21,113 +21,118 @@
       </div>
     </el-card>
 
-    <!-- 数据概览卡片 -->
-    <div class="data-overview">
-      <el-row :gutter="16">
-        <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="data-card" shadow="hover">
-            <div class="data-icon student-icon">
-              <el-icon><i-ep-user /></el-icon>
-            </div>
-            <div class="data-info">
-              <div class="data-title">学生用户</div>
-              <div class="data-value">{{ statsData.studentCount }}</div>
-              <div class="data-trend up">
-                <span>较上月</span>
-                <el-icon><i-ep-top /></el-icon>
-                <span>{{ statsData.studentGrowth }}%</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        
-        <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="data-card" shadow="hover">
-            <div class="data-icon company-icon">
-              <el-icon><i-ep-office-building /></el-icon>
-            </div>
-            <div class="data-info">
-              <div class="data-title">企业用户</div>
-              <div class="data-value">{{ statsData.companyCount }}</div>
-              <div class="data-trend up">
-                <span>较上月</span>
-                <el-icon><i-ep-top /></el-icon>
-                <span>{{ statsData.companyGrowth }}%</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        
-        <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="data-card" shadow="hover">
-            <div class="data-icon job-icon">
-              <el-icon><i-ep-briefcase /></el-icon>
-            </div>
-            <div class="data-info">
-              <div class="data-title">职位数量</div>
-              <div class="data-value">{{ statsData.jobCount }}</div>
-              <div class="data-trend up">
-                <span>较上月</span>
-                <el-icon><i-ep-top /></el-icon>
-                <span>{{ statsData.jobGrowth }}%</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        
-        <el-col :xs="24" :sm="12" :md="6">
-          <el-card class="data-card" shadow="hover">
-            <div class="data-icon app-icon">
-              <el-icon><i-ep-message /></el-icon>
-            </div>
-            <div class="data-info">
-              <div class="data-title">申请数量</div>
-              <div class="data-value">{{ statsData.applicationCount }}</div>
-              <div class="data-trend down">
-                <span>较上月</span>
-                <el-icon><i-ep-bottom /></el-icon>
-                <span>{{ statsData.applicationGrowth }}%</span>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
+    <!-- 统计卡片 -->
+    <div class="stats-cards" v-loading="statsLoading">
+      <!-- 学生用户 -->
+      <el-card class="stats-card" shadow="hover">
+        <div class="stats-card-content">
+          <div class="stats-card-title">
+            <el-icon class="icon"><UserFilled /></el-icon>
+            <span>学生用户</span>
+          </div>
+          <div class="stats-card-value">{{ statsData.studentCount }}</div>
+          <div class="stats-card-growth">
+            较上月
+            <span :class="statsData.studentGrowth >= 0 ? 'positive' : 'negative'">
+              {{ statsData.studentGrowth >= 0 ? '+' : '' }}{{ statsData.studentGrowth }}%
+            </span>
+          </div>
+        </div>
+        <i class="el-icon-user stats-card-bg"></i>
+      </el-card>
+
+      <!-- 企业用户 -->
+      <el-card class="stats-card" shadow="hover">
+        <div class="stats-card-content">
+          <div class="stats-card-title">
+            <el-icon class="icon"><OfficeBuilding /></el-icon>
+            <span>企业用户</span>
+          </div>
+          <div class="stats-card-value">{{ statsData.companyCount }}</div>
+          <div class="stats-card-growth">
+            较上月
+            <span :class="statsData.companyGrowth >= 0 ? 'positive' : 'negative'">
+              {{ statsData.companyGrowth >= 0 ? '+' : '' }}{{ statsData.companyGrowth }}%
+            </span>
+          </div>
+        </div>
+        <i class="el-icon-office-building stats-card-bg"></i>
+      </el-card>
+
+      <!-- 职位数量 -->
+      <el-card class="stats-card" shadow="hover">
+        <div class="stats-card-content">
+          <div class="stats-card-title">
+            <el-icon class="icon"><Briefcase /></el-icon>
+            <span>职位数量</span>
+          </div>
+          <div class="stats-card-value">{{ statsData.jobCount }}</div>
+          <div class="stats-card-growth">
+            较上月
+            <span :class="statsData.jobGrowth >= 0 ? 'positive' : 'negative'">
+              {{ statsData.jobGrowth >= 0 ? '+' : '' }}{{ statsData.jobGrowth }}%
+            </span>
+          </div>
+        </div>
+        <i class="el-icon-briefcase stats-card-bg"></i>
+      </el-card>
+
+      <!-- 申请数量 -->
+      <el-card class="stats-card" shadow="hover">
+        <div class="stats-card-content">
+          <div class="stats-card-title">
+            <el-icon class="icon"><Document /></el-icon>
+            <span>申请数量</span>
+          </div>
+          <div class="stats-card-value">{{ statsData.applicationCount }}</div>
+          <div class="stats-card-growth">
+            较上月
+            <span :class="statsData.applicationGrowth >= 0 ? 'positive' : 'negative'">
+              {{ statsData.applicationGrowth >= 0 ? '+' : '' }}{{ statsData.applicationGrowth }}%
+            </span>
+          </div>
+        </div>
+        <i class="el-icon-document stats-card-bg"></i>
+      </el-card>
     </div>
 
-    <!-- 图表区域 -->
+    <!-- 图表部分 -->
     <div class="chart-section">
-      <el-row :gutter="16">
-        <el-col :xs="24" :md="12">
-          <el-card class="chart-card" shadow="hover">
-            <template #header>
-              <div class="chart-header">
-                <h3>用户增长趋势</h3>
-                <el-radio-group v-model="userChartTimeRange" size="small">
-                  <el-radio-button label="week">周</el-radio-button>
-                  <el-radio-button label="month">月</el-radio-button>
-                  <el-radio-button label="year">年</el-radio-button>
-                </el-radio-group>
-              </div>
-            </template>
-            <div class="chart-container" ref="userChart"></div>
-          </el-card>
-        </el-col>
-        
-        <el-col :xs="24" :md="12">
-          <el-card class="chart-card" shadow="hover">
-            <template #header>
-              <div class="chart-header">
-                <h3>职位分布</h3>
-                <el-select v-model="jobChartType" size="small" style="width: 120px">
-                  <el-option label="城市分布" value="city" />
-                  <el-option label="行业分布" value="industry" />
-                </el-select>
-              </div>
-            </template>
-            <div class="chart-container" ref="jobChart"></div>
-          </el-card>
-        </el-col>
-      </el-row>
+      <!-- 用户增长趋势图 -->
+      <el-card class="chart-container" shadow="hover" v-loading="userChartLoading">
+        <template #header>
+          <div class="chart-header">
+            <h3 class="chart-title">用户增长趋势</h3>
+            <div class="time-range-selector">
+              <span class="label">时间范围:</span>
+              <el-radio-group v-model="userChartTimeRange" size="small">
+                <el-radio-button label="week">近一周</el-radio-button>
+                <el-radio-button label="month">近一月</el-radio-button>
+                <el-radio-button label="quarter">近一季</el-radio-button>
+                <el-radio-button label="year">近一年</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+        </template>
+        <div ref="userChart" class="chart-content"></div>
+      </el-card>
+
+      <!-- 职位分布图 -->
+      <el-card class="chart-container" shadow="hover" v-loading="jobChartLoading">
+        <template #header>
+          <div class="chart-header">
+            <h3 class="chart-title">职位分布</h3>
+            <div class="chart-type-selector">
+              <span class="label">分类方式:</span>
+              <el-radio-group v-model="jobChartType" size="small">
+                <el-radio-button label="city">城市分布</el-radio-button>
+                <el-radio-button label="industry">行业分布</el-radio-button>
+              </el-radio-group>
+            </div>
+          </div>
+        </template>
+        <div ref="jobChart" class="chart-content"></div>
+      </el-card>
     </div>
 
     <!-- 最近活动 -->
@@ -135,31 +140,56 @@
       <template #header>
         <div class="activity-header">
           <h3>最近活动</h3>
-          <el-button type="primary" text>查看全部</el-button>
+          <el-button type="primary" text @click="goToSystemLogs">查看全部</el-button>
         </div>
       </template>
       
-      <el-table :data="recentActivities" style="width: 100%" :max-height="300">
-        <el-table-column prop="time" label="时间" width="160" />
-        <el-table-column prop="type" label="类型" width="100">
+      <el-table 
+        :data="recentActivities" 
+        style="width: 100%" 
+        :max-height="300" 
+        v-loading="logsLoading"
+        empty-text="暂无活动记录">
+        <el-table-column prop="time" label="时间" width="140" />
+        <el-table-column prop="type" label="分类" width="100">
           <template #default="{ row }">
-            <el-tag
-              :type="activityTypeMap[row.type].type"
-              effect="light"
-              size="small">
-              {{ activityTypeMap[row.type].label }}
+            <el-tag :type="getTagType(row.type)" effect="light" size="small">
+              {{ row.type }}
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="description" label="操作" width="120" show-overflow-tooltip />
         <el-table-column prop="content" label="内容" show-overflow-tooltip />
-        <el-table-column prop="user" label="用户" width="120" show-overflow-tooltip />
-        <el-table-column label="操作" width="100">
-          <template #default>
-            <el-button type="primary" link size="small">详情</el-button>
+        <el-table-column prop="user" label="操作者" width="100" show-overflow-tooltip />
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="viewLogDetail(row.id)">详情</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 添加日志详情对话框 -->
+    <el-dialog
+      v-model="logDetailVisible"
+      title="日志详情"
+      width="600px"
+      destroy-on-close
+    >
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="ID">{{ currentLog.id }}</el-descriptions-item>
+        <el-descriptions-item label="时间">{{ currentLog.time }}</el-descriptions-item>
+        <el-descriptions-item label="类型">
+          <el-tag :type="getTagType(currentLog.type)" effect="light">
+            {{ currentLog.type }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="操作">{{ currentLog.description }}</el-descriptions-item>
+        <el-descriptions-item label="内容">{{ currentLog.content }}</el-descriptions-item>
+        <el-descriptions-item label="操作者">{{ currentLog.user }}</el-descriptions-item>
+        <el-descriptions-item label="IP地址">{{ currentLog.ipAddress }}</el-descriptions-item>
+      </el-descriptions>
+    </el-dialog>
   </div>
 </template>
 
@@ -176,12 +206,19 @@ import {
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { ElMessage } from 'element-plus';
+import { useRouter } from 'vue-router';
 import { 
   getBasicStats, 
   getUserRegisterTrend, 
   getJobStats, 
-  getRecentLogs 
+  getRecentLogs as fetchRecentLogs
 } from '../../api/admin-dashboard';
+import { 
+  UserFilled, 
+  OfficeBuilding, 
+  Briefcase, 
+  Document 
+} from '@element-plus/icons-vue';
 
 // 注册 echarts 组件
 echarts.use([
@@ -195,12 +232,19 @@ echarts.use([
   CanvasRenderer
 ]);
 
+const router = useRouter();
+
 // 当前日期
 const currentDate = format(new Date(), 'yyyy年MM月dd日');
 
 // 图表引用
 const userChart = ref(null);
 const jobChart = ref(null);
+
+// 加载状态
+const userChartLoading = ref(false);
+const jobChartLoading = ref(false);
+const statsLoading = ref(false);
 
 // 图表配置
 const userChartTimeRange = ref('month');
@@ -218,99 +262,253 @@ const statsData = reactive({
   applicationGrowth: 0
 });
 
-// 活动类型映射
-const activityTypeMap = {
-  register: { label: '注册', type: 'success' },
-  login: { label: '登录', type: 'info' },
-  apply: { label: '申请', type: '' },
-  post: { label: '发布', type: 'warning' },
-  interview: { label: '面试', type: 'danger' }
+// 获取Tag类型
+const getTagType = (type) => {
+  // 如果type为undefined或null，返回空字符串
+  if (!type) {
+    return '';
+  }
+  
+  const typeMap = {
+    '职位管理': 'success',
+    '学生管理': 'info',
+    '企业管理': 'warning',
+    '系统设置': 'danger',
+    'HTTP请求': '',
+  };
+  
+  // 匹配前缀
+  for (const [key, value] of Object.entries(typeMap)) {
+    if (type.startsWith(key)) {
+      return value;
+    }
+  }
+  
+  return '';
 };
 
 // 最近活动数据
 const recentActivities = ref([]);
+const logsLoading = ref(false);
+const logDetailVisible = ref(false);
+const currentLog = ref({});
 
-// 刷新仪表盘数据
-const refreshDashboard = () => {
-  fetchDashboardData();
-  ElMessage.success('数据已更新');
-};
-
-// 获取仪表盘数据
-const fetchDashboardData = async () => {
+// 获取基础统计数据
+const fetchBasicStats = async () => {
+  statsLoading.value = true;
   try {
-    // 获取基础统计数据
-    const statsRes = await getBasicStats();
-    if (statsRes.code === 200 && statsRes.data) {
-      Object.assign(statsData, statsRes.data);
+    const { data } = await getBasicStats();
+    if (data) {
+      statsData.studentCount = data.studentCount || 0;
+      statsData.studentGrowth = data.studentGrowth || 0;
+      statsData.companyCount = data.companyCount || 0;
+      statsData.companyGrowth = data.companyGrowth || 0;
+      statsData.jobCount = data.jobCount || 0;
+      statsData.jobGrowth = data.jobGrowth || 0;
+      statsData.applicationCount = data.applicationCount || 0;
+      statsData.applicationGrowth = data.applicationGrowth || 0;
     }
-    
-    // 获取最近活动
-    const logsRes = await getRecentLogs();
-    if (logsRes.code === 200 && logsRes.data) {
-      recentActivities.value = logsRes.data;
-    }
-    
-    // 初始化图表
-    initCharts();
   } catch (error) {
-    console.error('获取仪表盘数据失败:', error);
-    ElMessage.error('获取数据失败，请稍后重试');
+    console.error('获取基础统计数据失败:', error);
+    ElMessage.error('获取统计数据失败');
+  } finally {
+    statsLoading.value = false;
   }
 };
 
-// 获取用户注册趋势数据
+// 获取用户趋势数据
 const fetchUserTrendData = async () => {
+  if (!userChart.value) return;
+  
+  userChartLoading.value = true;
   try {
-    const res = await getUserRegisterTrend({
-      type: userChartTimeRange.value
+    // 根据选择的时间范围确定请求参数
+    const now = new Date();
+    let startDate, endDate, type;
+    
+    switch (userChartTimeRange.value) {
+      case 'week':
+        // 过去7天
+        startDate = format(new Date(now.setDate(now.getDate() - 7)), 'yyyy-MM-dd');
+        endDate = format(new Date(), 'yyyy-MM-dd');
+        type = 'daily';
+        break;
+      case 'month':
+        // 过去30天
+        startDate = format(new Date(now.setDate(now.getDate() - 30)), 'yyyy-MM-dd');
+        endDate = format(new Date(), 'yyyy-MM-dd');
+        type = 'daily';
+        break;
+      case 'quarter':
+        // 过去90天
+        startDate = format(new Date(now.setDate(now.getDate() - 90)), 'yyyy-MM-dd');
+        endDate = format(new Date(), 'yyyy-MM-dd');
+        type = 'weekly';
+        break;
+      case 'year':
+        // 过去一年
+        startDate = format(new Date(now.setFullYear(now.getFullYear() - 1)), 'yyyy-MM-dd');
+        endDate = format(new Date(), 'yyyy-MM-dd');
+        type = 'monthly';
+        break;
+      default:
+        startDate = format(new Date(now.setDate(now.getDate() - 30)), 'yyyy-MM-dd');
+        endDate = format(new Date(), 'yyyy-MM-dd');
+        type = 'daily';
+    }
+    
+    const { data } = await getUserRegisterTrend({ 
+      type, 
+      startDate, 
+      endDate 
     });
     
-    if (res.code === 200 && res.data) {
-      renderUserChart(res.data);
+    if (data) {
+      renderUserChart(data);
     }
   } catch (error) {
     console.error('获取用户趋势数据失败:', error);
+    ElMessage.error('获取用户趋势数据失败');
+  } finally {
+    userChartLoading.value = false;
   }
 };
 
-// 获取职位分布数据
-const fetchJobDistributionData = async () => {
+// 获取职位数据
+const fetchJobData = async () => {
+  if (!jobChart.value) return;
+  
+  jobChartLoading.value = true;
   try {
-    const res = await getJobStats();
-    
-    if (res.code === 200 && res.data) {
-      renderJobChart(res.data);
+    const { data } = await getJobStats();
+    if (data) {
+      renderJobChart(data);
     }
   } catch (error) {
-    console.error('获取职位分布数据失败:', error);
+    console.error('获取职位数据失败:', error);
+    ElMessage.error('获取职位数据失败');
+  } finally {
+    jobChartLoading.value = false;
   }
 };
 
-// 渲染用户趋势图表
+// 获取最近活动
+const fetchRecentActivities = async () => {
+  logsLoading.value = true;
+  try {
+    const response = await fetchRecentLogs(10);
+    // 确保响应存在且有data属性
+    if (!response || !response.data) {
+      console.error('获取日志数据失败或数据为空');
+      recentActivities.value = [];
+      return;
+    }
+    
+    const { data } = response;
+    console.log('获取到的日志数据:', data);
+    
+    // 处理数据，确保格式正确
+    if (Array.isArray(data)) {
+      recentActivities.value = data.map(log => ({
+        id: log.id || 0,
+        time: log.time || '未知时间',
+        type: log.type || '其他操作',
+        action: log.action || '',
+        description: log.description || log.action || '未知操作',
+        content: log.content || '无操作内容',
+        user: log.user || '未知用户',
+        ipAddress: log.ipAddress || '-'
+      }));
+    } else if (data.logs && Array.isArray(data.logs)) {
+      recentActivities.value = data.logs.map(log => ({
+        id: log.id || 0,
+        time: log.time || '未知时间',
+        type: log.type || '其他操作',
+        action: log.action || '',
+        description: log.description || log.action || '未知操作',
+        content: log.content || '无操作内容',
+        user: log.user || '未知用户',
+        ipAddress: log.ipAddress || '-'
+      }));
+    } else if (data.list && Array.isArray(data.list)) {
+      // 适配后端返回的分页格式
+      recentActivities.value = data.list.map(log => ({
+        id: log.id || 0,
+        time: log.time || '未知时间',
+        type: log.type || '其他操作',
+        action: log.action || '',
+        description: log.description || log.action || '未知操作',
+        content: log.content || '无操作内容',
+        user: log.user || '未知用户',
+        ipAddress: log.ipAddress || '-'
+      }));
+    } else {
+      console.error('收到的日志数据格式不符合预期', data);
+      recentActivities.value = [];
+    }
+  } catch (error) {
+    console.error('获取最近活动失败:', error);
+    ElMessage.error('获取最近活动数据失败');
+    recentActivities.value = [];
+  } finally {
+    logsLoading.value = false;
+  }
+};
+
+// 渲染用户注册趋势图表
 const renderUserChart = (data) => {
-  if (userChart.value) {
-    const chart = echarts.init(userChart.value);
+  // 检查DOM元素是否存在
+  if (!userChart.value) {
+    console.error('用户趋势图DOM元素未找到');
+    return;
+  }
+  
+  try {
+    console.log('渲染用户趋势图，数据:', data);
+    
+    // 销毁已有实例，避免重复渲染问题
+    let chart = echarts.getInstanceByDom(userChart.value);
+    if (chart) {
+      chart.dispose();
+    }
+    
+    // 创建新的图表实例
+    chart = echarts.init(userChart.value);
+    
+    // 从后端返回的实际数据格式中提取数据
+    const xAxisData = data.dates || [];
+    const studentData = data.studentData || []; // 修改为studentData
+    const companyData = data.companyData || []; // 修改为companyData
+    
+    console.log('图表数据:', {
+      xAxisData,
+      studentData,
+      companyData
+    });
     
     const option = {
-      color: ['#1677FF', '#13C2C2'],
+      title: {
+        text: '用户增长趋势',
+        left: 'center'
+      },
       tooltip: {
         trigger: 'axis'
       },
       legend: {
         data: ['学生用户', '企业用户'],
-        right: 0
+        bottom: 0
       },
       grid: {
         left: '3%',
         right: '4%',
-        bottom: '3%',
+        bottom: '10%',
+        top: '15%',
         containLabel: true
       },
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: data.dates || []
+        data: xAxisData
       },
       yAxis: {
         type: 'value'
@@ -320,52 +518,93 @@ const renderUserChart = (data) => {
           name: '学生用户',
           type: 'line',
           smooth: true,
-          data: data.studentData || []
+          data: studentData
         },
         {
           name: '企业用户',
           type: 'line',
           smooth: true,
-          data: data.companyData || []
+          data: companyData
         }
       ]
     };
     
     chart.setOption(option);
     
-    // 窗口大小变化时重绘图表
+    // 响应窗口大小变化
     window.addEventListener('resize', () => {
       chart.resize();
     });
+  } catch (error) {
+    console.error('渲染用户趋势图失败:', error);
   }
 };
 
 // 渲染职位分布图表
 const renderJobChart = (data) => {
-  if (jobChart.value) {
-    const chart = echarts.init(jobChart.value);
+  // 检查DOM元素是否存在
+  if (!jobChart.value) {
+    console.error('职位分布图DOM元素未找到');
+    return;
+  }
+  
+  try {
+    console.log('渲染职位分布图，数据:', data);
     
-    // 根据类型选择合适的数据
-    const jobData = jobChartType.value === 'city' ? 
-      (data.cityDistribution || []) : 
-      (data.industryDistribution || []);
+    // 销毁已有实例，避免重复渲染问题
+    let chart = echarts.getInstanceByDom(jobChart.value);
+    if (chart) {
+      chart.dispose();
+    }
+    
+    // 创建新的图表实例
+    chart = echarts.init(jobChart.value);
+    
+    // 确定要显示的数据
+    let chartData = [];
+    let chartTitle = '';
+    
+    if (jobChartType.value === 'city') {
+      chartData = data.cityDistribution || [];
+      chartTitle = '职位城市分布';
+    } else if (jobChartType.value === 'industry') {
+      chartData = data.industryDistribution || [];
+      chartTitle = '职位行业分布';
+    }
+    
+    console.log('选择的图表数据:', {
+      type: jobChartType.value,
+      chartData,
+      chartTitle
+    });
+    
+    // 处理数据格式 - 适配后端实际返回的数据结构
+    // 注意这里使用了name和value直接传递，不再需要转换
+    const formattedData = chartData.map(item => ({
+      name: item.name,
+      value: item.value // 修改为value而不是count
+    }));
     
     const option = {
+      title: {
+        text: chartTitle,
+        left: 'center'
+      },
       tooltip: {
         trigger: 'item',
         formatter: '{a} <br/>{b}: {c} ({d}%)'
       },
       legend: {
-        orient: 'vertical',
-        right: 10,
-        top: 'center',
-        data: jobData.map(item => item.name)
+        type: 'scroll',
+        orient: 'horizontal',
+        bottom: 0,
+        data: formattedData.map(item => item.name)
       },
       series: [
         {
-          name: '职位分布',
+          name: chartTitle,
           type: 'pie',
-          radius: ['50%', '70%'],
+          radius: ['40%', '70%'],
           avoidLabelOverlap: false,
           itemStyle: {
             borderRadius: 10,
@@ -379,196 +618,208 @@ const renderJobChart = (data) => {
           emphasis: {
             label: {
               show: true,
-              fontSize: 16,
+              fontSize: '18',
               fontWeight: 'bold'
             }
           },
           labelLine: {
             show: false
           },
-          data: jobData
+          data: formattedData
         }
       ]
     };
     
     chart.setOption(option);
     
-    // 窗口大小变化时重绘图表
+    // 响应窗口大小变化
     window.addEventListener('resize', () => {
       chart.resize();
     });
+  } catch (error) {
+    console.error('渲染职位分布图失败:', error);
   }
 };
 
-// 监听图表类型变化
-const initCharts = () => {
-  nextTick(() => {
-    fetchUserTrendData();
-    fetchJobDistributionData();
-  });
-};
-
-// 监听图表类型变化
+// 监听时间范围变化，重新获取数据
 watch(userChartTimeRange, () => {
   fetchUserTrendData();
 });
 
+// 监听职位图表类型变化，重新绘制图表
 watch(jobChartType, () => {
-  fetchJobDistributionData();
+  fetchJobData();
 });
 
-// 页面加载时初始化
-onMounted(() => {
-  fetchDashboardData();
+// 刷新仪表盘数据
+const refreshDashboard = async () => {
+  try {
+    ElMessage.info('正在刷新数据...');
+    
+    // 重新获取所有数据
+    await fetchBasicStats();
+    await fetchUserTrendData();
+    await fetchJobData();
+    await fetchRecentActivities();
+    
+    ElMessage.success('数据已更新');
+  } catch (error) {
+    console.error('刷新数据失败:', error);
+    ElMessage.error('刷新数据失败');
+  }
+};
+
+// 查看日志详情
+const viewLogDetail = (id) => {
+  // 从日志列表中查找对应的日志
+  const log = recentActivities.value.find(item => item.id === id);
+  if (log) {
+    currentLog.value = log;
+    logDetailVisible.value = true;
+  } else {
+    ElMessage.warning('找不到对应的日志记录');
+  }
+};
+
+// 跳转到系统日志页面
+const goToSystemLogs = () => {
+  router.push('/admin/logs');
+};
+
+// 初始化
+onMounted(async () => {
+  await fetchBasicStats();
+  
+  // 确保DOM已渲染
+  await nextTick();
+  
+  fetchUserTrendData();
+  fetchJobData();
+  fetchRecentActivities();
 });
 </script>
 
 <style scoped>
 .dashboard-container {
-  display: flex;
-  flex-direction: column;
+  padding: 20px;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
+  margin-bottom: 20px;
 }
 
-.welcome-card {
-  background-color: #fff;
-  margin-bottom: 4px;
-}
-
-.welcome-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.welcome-header h2 {
-  margin: 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.welcome-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.welcome-info h3 {
-  margin: 0 0 8px 0;
-  font-size: 20px;
-  font-weight: 500;
-  color: #222;
-}
-
-.welcome-info p {
-  margin: 0;
-  color: #666;
-}
-
-.data-overview {
-  margin-bottom: 4px;
-}
-
-.data-card {
-  height: 140px;
-  padding: 10px;
-  display: flex;
-  align-items: center;
-  margin-bottom: 16px;
-  overflow: hidden;
+.stats-card {
+  height: 120px;
   position: relative;
+  overflow: hidden;
+  cursor: pointer;
   transition: all 0.3s;
 }
 
-.data-card:hover {
+.stats-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
-.data-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+.stats-card-content {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: 20px;
+  z-index: 2;
+  position: relative;
+}
+
+.stats-card-title {
+  display: flex;
   align-items: center;
-  margin-right: 16px;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #606266;
 }
 
-.data-icon .el-icon {
-  font-size: 32px;
-  color: #fff;
+.stats-card-title .icon {
+  margin-right: 8px;
+  font-size: 20px;
 }
 
-.student-icon {
-  background-color: #1677FF;
-}
-
-.company-icon {
-  background-color: #13C2C2;
-}
-
-.job-icon {
-  background-color: #722ED1;
-}
-
-.app-icon {
-  background-color: #EB2F96;
-}
-
-.data-info {
-  flex: 1;
-}
-
-.data-title {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.data-value {
-  font-size: 28px;
+.stats-card-value {
+  font-size: 26px;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 8px;
+  color: #303133;
+  margin-bottom: 5px;
 }
 
-.data-trend {
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.stats-card-growth {
+  font-size: 14px;
+  color: #909399;
 }
 
-.data-trend.up {
-  color: #52c41a;
+.stats-card-growth .positive {
+  color: #67C23A;
 }
 
-.data-trend.down {
-  color: #f5222d;
+.stats-card-growth .negative {
+  color: #F56C6C;
+}
+
+.stats-card-bg {
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  font-size: 120px;
+  opacity: 0.05;
+  transform: rotate(-15deg);
+  z-index: 1;
 }
 
 .chart-section {
-  margin-bottom: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
-.chart-card {
-  margin-bottom: 16px;
+.chart-container {
+  position: relative;
 }
 
 .chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid #EBEEF5;
 }
 
-.chart-header h3 {
-  margin: 0;
+.chart-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: bold;
+  margin: 0;
 }
 
-.chart-container {
-  height: 300px;
+.chart-content {
+  height: 400px;
+}
+
+.time-range-selector,
+.chart-type-selector {
+  display: flex;
+  align-items: center;
+}
+
+.time-range-selector .label,
+.chart-type-selector .label {
+  margin-right: 10px;
+  color: #606266;
+}
+
+.recent-activity {
+  margin-bottom: 20px;
 }
 
 .activity-header {
@@ -579,28 +830,21 @@ onMounted(() => {
 
 .activity-header h3 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 500;
 }
 
-.recent-activity {
-  margin-bottom: 20px;
+@media (max-width: 1200px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .chart-section {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* 响应式样式 */
 @media (max-width: 768px) {
-  .welcome-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-  
-  .data-card {
-    height: auto;
-  }
-  
-  .chart-container {
-    height: 250px;
+  .stats-cards {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

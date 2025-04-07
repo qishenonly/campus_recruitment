@@ -36,6 +36,11 @@
             <el-icon><i-ep-setting /></el-icon>
             <template #title>系统设置</template>
           </el-menu-item>
+          
+          <el-menu-item index="/admin/logs">
+            <el-icon><i-ep-document /></el-icon>
+            <template #title>系统日志</template>
+          </el-menu-item>
         </el-menu>
       </el-aside>
       
@@ -123,7 +128,8 @@ const currentPageTitle = computed(() => {
     '/admin/dashboard': '数据统计',
     '/admin/students': '学生管理',
     '/admin/companies': '企业管理',
-    '/admin/settings': '系统设置'
+    '/admin/settings': '系统设置',
+    '/admin/logs': '系统日志'
   }
   return routeMap[route.path] || '首页'
 })

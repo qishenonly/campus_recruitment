@@ -204,3 +204,20 @@ CREATE TABLE job_favorites (
     UNIQUE KEY `uk_student_job` (`student_id`, `job_id`)  -- 防止重复收藏
 );
 
+-- 系统操作日志表
+CREATE TABLE system_logs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    operation_type VARCHAR(50) NOT NULL COMMENT '操作类型',
+    content TEXT COMMENT '操作内容',
+    operator_name VARCHAR(100) NOT NULL COMMENT '操作者姓名',
+    operator_id BIGINT COMMENT '操作者ID',
+    ip_address VARCHAR(50) COMMENT 'IP地址',
+    create_time DATETIME NOT NULL COMMENT '操作时间'
+);
+
+-- 初始化管理员账号
+-- 注意：密码使用加密方式存储，这里使用BCrypt加密方式，admin123的加密后的结果
+INSERT INTO users (username, password, email, phone, role, create_time, update_time, status) 
+VALUES ('admin', '$2a$10$oc0Uv5zlO6rOZiMWxP1JZ.lMM4oRohrY5dq0UTCOKFNhAgPnkUo0G', 'admin@campus.com', '13800000000', 'ADMIN', NOW(), NOW(), 'ACTIVE')
+ON DUPLICATE KEY UPDATE update_time = NOW();
+

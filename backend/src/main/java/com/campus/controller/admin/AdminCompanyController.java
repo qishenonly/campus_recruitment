@@ -1,5 +1,6 @@
 package com.campus.controller.admin;
 
+import com.campus.annotation.OperationLog;
 import com.campus.dto.CompanyDTO;
 import com.campus.dto.JobDTO;
 import com.campus.dto.PageDTO;
@@ -68,6 +69,7 @@ public class AdminCompanyController {
      * @return 添加结果
      */
     @PostMapping
+    @OperationLog(operationType = "企业管理", description = "添加企业")
     public ResponseDTO<Long> addCompany(@RequestBody @Valid CompanyDTO companyDTO) {
         return adminCompanyService.addCompany(companyDTO);
     }
@@ -79,6 +81,7 @@ public class AdminCompanyController {
      * @return 更新结果
      */
     @PutMapping("/{id}")
+    @OperationLog(operationType = "企业管理", description = "更新企业信息")
     public ResponseDTO<Void> updateCompany(
             @PathVariable Long id, 
             @RequestBody @Valid CompanyDTO companyDTO) {
@@ -92,6 +95,7 @@ public class AdminCompanyController {
      * @return 操作结果
      */
     @PostMapping("/{id}/verify")
+    @OperationLog(operationType = "企业管理", description = "认证企业")
     public ResponseDTO<Void> verifyCompany(
             @PathVariable Long id,
             @RequestBody Map<String, String> requestBody) {
@@ -105,6 +109,7 @@ public class AdminCompanyController {
      * @return 操作结果
      */
     @PostMapping("/{id}/disable")
+    @OperationLog(operationType = "企业管理", description = "禁用企业")
     public ResponseDTO<Void> disableCompany(@PathVariable Long id) {
         return adminCompanyService.disableCompany(id);
     }
@@ -115,6 +120,7 @@ public class AdminCompanyController {
      * @return 操作结果
      */
     @PostMapping("/{id}/enable")
+    @OperationLog(operationType = "企业管理", description = "启用企业")
     public ResponseDTO<Void> enableCompany(@PathVariable Long id) {
         return adminCompanyService.enableCompany(id);
     }
@@ -125,6 +131,7 @@ public class AdminCompanyController {
      * @return 操作结果
      */
     @DeleteMapping("/{id}")
+    @OperationLog(operationType = "企业管理", description = "删除企业")
     public ResponseDTO<Void> deleteCompany(@PathVariable Long id) {
         return adminCompanyService.deleteCompany(id);
     }

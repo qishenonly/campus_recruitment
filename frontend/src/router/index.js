@@ -238,6 +238,16 @@ const routes = [
           requireAuth: true,
           adminOnly: true
         }
+      },
+      {
+        path: 'logs',
+        name: 'systemLogs',
+        component: () => import('../views/admin/SystemLogs.vue'),
+        meta: { 
+          title: '系统日志',
+          requireAuth: true,
+          adminOnly: true
+        }
       }
     ]
   }

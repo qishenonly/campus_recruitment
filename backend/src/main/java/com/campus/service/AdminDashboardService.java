@@ -65,11 +65,11 @@ public interface AdminDashboardService {
      * @return 系统访问统计
      */
     ResponseDTO<?> getVisitStats(String type, String startDate, String endDate);
-
+    
     /**
-     * 获取最近操作日志
+     * 获取最近的操作日志
      * @param limit 获取数量
-     * @return 最近操作日志
+     * @return 最近的操作日志
      */
     ResponseDTO<?> getRecentLogs(Integer limit);
 } 
