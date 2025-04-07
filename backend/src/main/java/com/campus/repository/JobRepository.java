@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -65,4 +66,11 @@ public interface JobRepository extends JpaRepository<Job, Long> {
 
     @Query("SELECT j.id FROM Job j WHERE j.companyId = :companyId")
     List<Long> findIdsByCompanyId(@Param("companyId") Long companyId);
+    
+    /**
+     * 统计发布日期在指定日期之前的职位数量
+     * @param dateTime 指定日期
+     * @return 职位数量
+     */
+    long countByPublishDateBefore(LocalDateTime dateTime);
 } 

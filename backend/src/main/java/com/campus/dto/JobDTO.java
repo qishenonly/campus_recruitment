@@ -1,36 +1,119 @@
 package com.campus.dto;
 
-import com.campus.model.Job;
 import lombok.Data;
-import java.time.LocalDateTime;
 
+/**
+ * 职位DTO
+ */
 @Data
 public class JobDTO {
+    /**
+     * 职位ID
+     */
     private Long id;
+
+    /**
+     * 职位名称
+     */
     private String title;
-    private String description;
-    private String requirements;
-    private String salary;
-    private String location;
-    private Job.PositionType positionType;
-    private String educationRequirement;
-    private String majorRequirement;
-    private LocalDateTime publishDate;
-    private LocalDateTime deadline;
-    private Job.JobStatus status;
-    private Integer viewCount;
-    private Integer applyCount;
-    
-    // 公司信息
+
+    /**
+     * 所属企业ID
+     */
     private Long companyId;
+
+    /**
+     * 所属企业名称
+     */
     private String companyName;
+
+    /**
+     * 发布者ID
+     */
+    private Long publisherId;
+
+    /**
+     * 发布者姓名
+     */
+    private String publisherName;
+
+    /**
+     * 发布者职位
+     */
+    private String publisherPosition;
+
+    /**
+     * 所属行业
+     */
     private String industry;
+
+    /**
+     * 企业Logo
+     */
     private String companyLogo;
+
+    /**
+     * 企业规模
+     */
     private String companyScale;
+
+    /**
+     * 企业是否认证
+     */
     private Boolean companyVerified;
-    
-    // 添加发布者信息
-    private Long publisherId;  // 发布这个职位的企业员工ID
-    private String publisherName;  // 发布者姓名
-    private String publisherPosition;  // 发布者职位
+
+    /**
+     * 工作地点
+     */
+    private String location;
+
+    /**
+     * 薪资范围
+     */
+    private String salary;
+
+    /**
+     * 工作经验要求
+     */
+    private String experience;
+
+    /**
+     * 学历要求
+     */
+    private String education;
+
+    /**
+     * 职位类别
+     */
+    private String category;
+
+    /**
+     * 职位描述
+     */
+    private String description;
+
+    /**
+     * 职位要求
+     */
+    private String requirement;
+
+    /**
+     * 发布时间
+     */
+    private String publishTime;
+
+    /**
+     * 截止时间
+     */
+    private String deadline;
+
+    /**
+     * 状态
+     */
+    private String status;
+
+    /**
+     * 投递人数
+     */
+    private Integer applyCount;
 } 

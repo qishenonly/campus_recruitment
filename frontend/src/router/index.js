@@ -183,12 +183,105 @@ const routes = [
         }
       }
     ]
+  },
+  // 管理后台路由
+  {
+    path: '/admin/login',
+    name: 'adminLogin',
+    component: () => import('../views/admin/AdminLogin.vue'),
+    meta: { title: '管理员登录' }
+  },
+  {
+    path: '/admin',
+    component: () => import('../views/admin/AdminLayout.vue'),
+    children: [
+      {
+        path: '',
+        redirect: '/admin/dashboard'
+      },
+      {
+        path: 'dashboard',
+        name: 'adminDashboard',
+        component: () => import('../views/admin/Dashboard.vue'),
+        meta: { 
+          title: '数据统计',
+          requireAuth: true,
+          adminOnly: true
+        }
+      },
+      {
+        path: 'students',
+        name: 'studentManagement',
+        component: () => import('../views/admin/StudentManagement.vue'),
+        meta: { 
+          title: '学生管理',
+          requireAuth: true,
+          adminOnly: true
+        }
+      },
+      {
+        path: 'companies',
+        name: 'companyManagement',
+        component: () => import('../views/admin/CompanyManagement.vue'),
+        meta: { 
+          title: '企业管理',
+          requireAuth: true,
+          adminOnly: true
+        }
+      },
+      {
+        path: 'settings',
+        name: 'systemSettings',
+        component: () => import('../views/admin/Settings.vue'),
+        meta: { 
+          title: '系统设置',
+          requireAuth: true,
+          adminOnly: true
+        }
+      }
+    ]
   }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// 路由前置守卫
+router.beforeEach((to, from, next) => {
+  // 设置页面标题
+  if (to.meta.title) {
+    document.title = to.meta.title + ' - 青云直聘'
+  }
+  
+  // 检查是否需要管理员权限
+  if (to.matched.some(record => record.meta.adminOnly)) {
+    const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}')
+    if (!adminInfo.id) {
+      next({ path: '/admin/login', query: { redirect: to.fullPath } })
+    } else {
+      next()
+    }
+  } 
+  // 检查是否需要普通认证
+  else if (to.matched.some(record => record.meta.requireAuth)) {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    
+    if (!userInfo.id) {
+      next({ path: '/login', query: { redirect: to.fullPath } })
+    } else {
+      // 检查角色权限
+      const roles = to.meta.roles
+      if (roles && !roles.includes(userInfo.role)) {
+        next({ path: '/403' })
+      } else {
+        next()
+      }
+    }
+  } else {
+    next()
+  }
 })
 
 export default router

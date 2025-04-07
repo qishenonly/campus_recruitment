@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+
 @Repository
 public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
     
@@ -46,4 +48,19 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
            "JOIN Job j ON ja.jobId = j.id " +
            "WHERE ja.resumeId = ?1 AND j.companyId = ?2")
     boolean existsByResumeIdAndCompanyId(Long resumeId, Long companyId);
+    
+    /**
+     * 统计创建时间在指定日期之前的职位申请数量
+     * @param dateTime 指定日期
+     * @return 职位申请数量
+     */
+    long countByCreateTimeBefore(LocalDateTime dateTime);
+    
+    /**
+     * 统计创建时间在指定日期范围内的职位申请数量
+     * @param startDateTime 开始日期
+     * @param endDateTime 结束日期
+     * @return 职位申请数量
+     */
+    long countByCreateTimeBetween(LocalDateTime startDateTime, LocalDateTime endDateTime);
 } 
