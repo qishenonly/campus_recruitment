@@ -88,6 +88,10 @@ public class JobService {
 
     public JobDTO convertToDTO(Job job) {
         JobDTO dto = new JobDTO();
+        dto.setId(job.getId());
+        dto.setTitle(job.getTitle());
+        dto.setCompanyId(job.getPublisherId());  // 发布者的用户ID
+        dto.setCompanyEntityId(job.getCompanyId()); // 实际公司ID
         BeanUtils.copyProperties(job, dto);
         
         // 获取公司信息

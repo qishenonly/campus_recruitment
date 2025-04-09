@@ -21,6 +21,12 @@ public class Conversation {
     @Column(name = "company_id")  // 这里实际上是HR的user_id
     private Long companyId;       // 存储发布职位的HR的user_id
     
+    @Column(name = "company_entity_id")
+    private Long companyEntityId; // 实际公司实体ID
+    
+    @Column(name = "company_employee_id")
+    private Long companyEmployeeId; // 处理该会话的公司员工ID（团队成员ID）
+    
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private ConversationStatus status = ConversationStatus.ACTIVE;

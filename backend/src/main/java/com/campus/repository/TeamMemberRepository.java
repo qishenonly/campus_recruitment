@@ -45,4 +45,8 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     // 使用自定义查询替换 findByUserId
     @Query("SELECT t FROM TeamMember t WHERE t.user.id = :userId")
     Optional<TeamMember> findByUserId(@Param("userId") Long userId);
+    
+    // 根据用户ID和公司ID查询员工
+    @Query("SELECT t FROM TeamMember t WHERE t.user.id = :userId AND t.company.id = :companyId")
+    Optional<TeamMember> findByUserIdAndCompanyId(@Param("userId") Long userId, @Param("companyId") Long companyId);
 } 

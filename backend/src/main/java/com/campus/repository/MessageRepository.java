@@ -20,6 +20,12 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("UPDATE Message m SET m.isRead = true WHERE m.id = :messageId AND m.conversationId = :conversationId")
     void markAsRead(Long messageId, Long conversationId);
 
+    // 根据会话ID将所有消息标记为已读（新方法）
+    @Modifying
+    @Transactional
+    @Query("UPDATE Message m SET m.isRead = true WHERE m.conversationId = :conversationId AND m.senderId != :userId AND m.isRead = false")
+    void markMessagesAsReadInConversation(Long conversationId, Long userId);
+
     Message findFirstByConversationIdOrderByCreateTimeDesc(Long conversationId);
 
     long countByConversationIdAndSenderIdNotAndIsReadFalse(Long conversationId, Long userId);

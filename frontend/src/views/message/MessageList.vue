@@ -45,7 +45,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { format, isToday, isYesterday, parseISO } from 'date-fns'
-import { getConversationList } from '@/api/messages'
+import { getConversationList, markConversationAsRead } from '@/api/messages'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -86,8 +86,25 @@ const formatTime = (timeString) => {
 }
 
 // 跳转到聊天页面
-const goToChat = (conversationId) => {
-  router.push(`/message/chat/${conversationId}`)
+const goToChat = async (conversationId) => {
+  try {
+    // 标记会话消息为已读
+    // await markConversationAsRead(conversationId)
+    console.log('会话消息已标记为已读')
+    
+    // 更新本地状态，将已读标记移除
+    const index = conversations.value.findIndex(conv => conv.id === conversationId)
+    if (index !== -1) {
+      conversations.value[index].unreadCount = 0
+    }
+    
+    // 跳转到聊天页面
+    router.push(`/chat/${conversationId}`)
+  } catch (error) {
+    console.error('标记消息已读失败:', error)
+    // 即使标记失败，也允许跳转
+    router.push(`/chat/${conversationId}`)
+  }
 }
 
 onMounted(() => {

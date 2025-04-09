@@ -97,7 +97,8 @@ public class JobApplicationService {
             Conversation conversation = new Conversation();
             conversation.setApplicationId(savedApplication.getId());
             conversation.setStudentId(studentId);
-            conversation.setCompanyId(jobDTO.getCompanyId());  // 使用公司ID
+            conversation.setCompanyId(jobDTO.getCompanyId());  // 使用公司用户ID
+            conversation.setCompanyEntityId(jobDTO.getCompanyEntityId()); // 添加公司实体ID
             conversation.setCreateTime(LocalDateTime.now());
             conversation.setUpdateTime(LocalDateTime.now());
             conversation.setStatus(Conversation.ConversationStatus.ACTIVE);

@@ -41,13 +41,21 @@
               </div>
               <div class="content">
                 <div class="header">
-                  <span class="company-name">{{ conversation.publisherName + ' [' + conversation.publisherPosition + ']' || '未知用户' }}</span>
+                  <span class="company-name" v-if="userRole === 'STUDENT'">
+                    {{ conversation.publisherName + ' [' + conversation.publisherPosition + '@' + conversation.companyName + '] ' || '未知用户' }}
+                  </span>
+                  <span class="company-name" v-else-if="userRole === 'COMPANY'">
+                    {{ conversation.studentName + ' [' + conversation.studentSchool + ']' || '未知学生' }}
+                  </span>
+                  <span class="company-name" v-else>
+                    {{ conversation.publisherName || '未知用户' }}
+                  </span>
                   <span class="time">{{ formatTime(conversation.createTime) }}</span>
                 </div>
                 <div class="message-preview">
                   <div class="preview-container">
                     <span class="preview-text">{{ conversation.content || '暂无消息' }}</span>
-                    <span v-if="conversation.jobTitle" class="job-tag">{{ conversation.jobTitle + ' [' + conversation.companyName + '] ' }}</span>
+                    <span v-if="conversation.jobTitle" class="job-tag">{{ conversation.jobTitle }}</span>
                   </div>
                   <div v-if="conversation.unreadCount" class="unread-count">
                     {{ conversation.unreadCount }}
@@ -83,7 +91,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { formatDistance } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import { getConversations } from '@/api/messages'
+import { getConversations, markMessageAsRead } from '@/api/messages'
 import { formatTime } from '@/utils/format'
 import { getUserInfo } from '@/api/user'
 import { getCompanyByJobId } from '@/api/jobs'
@@ -103,12 +111,18 @@ const conversations = ref([])
 const userInfoMap = ref(new Map()) // 存储用户信息的Map
 const userRole = localStorage.getItem('userInfo') ? JSON.parse(localStorage.getItem('userInfo')).role : null;
 
-// 消息类型标签
-const tabs = [
-  { name: '全部消息', type: 'all', unread: 5 },
-  { name: '系统通知', type: 'system', unread: 2 },
-  { name: '投递反馈', type: 'job', unread: 3 },
-]
+// 根据用户角色显示不同的标签
+const tabs = ref([
+  { name: '全部消息', type: 'all', unread: 0 },
+]);
+
+// 如果是公司用户，添加额外的标签
+if (userRole === 'COMPANY') {
+  tabs.value.push(
+    { name: '我处理的', type: 'assigned', unread: 0 },
+    { name: '公司消息', type: 'company', unread: 0 }
+  );
+}
 
 // 带有用户信息的会话列表
 const conversationsWithInfo = computed(() => {
@@ -177,13 +191,22 @@ const viewJobDetail = (jobId) => {
 // 标记消息已读
 const markAsRead = async (messageId) => {
   try {
-    // TODO: 调用标记已读 API
-    const index = messages.value.findIndex(msg => msg.id === messageId)
-    if (index !== -1) {
-      messages.value[index].isRead = true
+    // 调用标记已读API
+    const conversationId = currentChatId.value; // 假设currentChatId已被设置
+    if (conversationId) {
+      // await markMessageAsRead(conversationId, messageId);
+      console.log('消息已标记为已读');
+      
+      // 更新本地状态
+      const index = messages.value.findIndex(msg => msg.id === messageId);
+      if (index !== -1) {
+        messages.value[index].isRead = true;
+      }
+    } else {
+      console.error('无法标记消息：未找到会话ID');
     }
   } catch (error) {
-    console.error('标记消息已读失败:', error)
+    console.error('标记消息已读失败:', error);
   }
 }
 
@@ -201,13 +224,15 @@ const fetchUserInfo = async (id) => {
 
 // 获取会话列表
 const fetchConversations = async () => {
+  if (loading.value && !refreshing.value) return;
+  
   try {
-    console.log('获取会话列表, 页码:', page.value, '类型:', currentTab.value)
+    console.log('获取会话列表, 页码:', page.value, '类型:', currentTab.value);
     const res = await getConversations({
       page: page.value,
       size: pageSize,
-      type: currentTab.value // 添加类型参数
-    })
+      type: currentTab.value
+    });
 
     console.log('会话原始数据:', res.data)
     const newConversations = res.data.content || []
@@ -221,6 +246,19 @@ const fetchConversations = async () => {
         conv.userId = conv.companyId;
       } else if (userRole === 'COMPANY') {
         conv.userId = conv.studentId;
+        
+        // 为企业用户获取学生信息
+        try {
+          const studentInfo = await getUserInfo(conv.studentId);
+          if (studentInfo.code === 200 && studentInfo.data) {
+            conv.studentName = studentInfo.data.realName || '未知学生';
+            conv.studentSchool = studentInfo.data.university || '未知学校';
+          }
+        } catch (error) {
+          console.error(`获取学生信息失败，学生ID=${conv.studentId}:`, error);
+          conv.studentName = '未知学生';
+          conv.studentSchool = '未知学校';
+        }
       }
       
       // 确保职位信息存在
@@ -316,17 +354,28 @@ const onLoad = () => {
 }
 
 // 跳转到聊天页面
-const goToChat = (conversation) => {
-  const userInfo = userInfoMap.value.get(conversation.userId)
-  router.push({
-    path: `/chat/${conversation.id}`,
-    query: {
-      companyName: userInfo?.username,
-      companyLogo: userInfo?.avatar,
-      jobTitle: conversation.jobTitle,
-      jobId: conversation.jobId
-    }
-  })
+const goToChat = async (conversation) => {
+  try {
+    // 标记会话消息为已读
+    // await markConversationAsRead(conversation.id)
+    console.log('会话消息已标记为已读')
+    
+    // 更新本地状态
+    conversation.unreadCount = 0
+    
+    // 跳转到聊天页面
+    router.push({
+      path: `/chat/${conversation.id}`,
+      query: { jobTitle: conversation.jobTitle, jobId: conversation.jobId }
+    })
+  } catch (error) {
+    console.error('标记消息已读失败:', error)
+    // 即使标记失败，也允许跳转
+    router.push({
+      path: `/chat/${conversation.id}`,
+      query: { jobTitle: conversation.jobTitle, jobId: conversation.jobId }
+    })
+  }
 }
 
 // 加载更多
@@ -356,6 +405,19 @@ const loadMore = async () => {
         conv.userId = conv.companyId;
       } else if (userRole === 'COMPANY') {
         conv.userId = conv.studentId;
+        
+        // 为企业用户获取学生信息
+        try {
+          const studentInfo = await getUserInfo(conv.studentId);
+          if (studentInfo.code === 200 && studentInfo.data) {
+            conv.studentName = studentInfo.data.realName || '未知学生';
+            conv.studentSchool = studentInfo.data.university || '未知学校';
+          }
+        } catch (error) {
+          console.error(`获取学生信息失败，学生ID=${conv.studentId}:`, error);
+          conv.studentName = '未知学生';
+          conv.studentSchool = '未知学校';
+        }
       }
       
       // 确保职位信息存在

@@ -10,9 +10,23 @@
             <img :src="getOtherUserAvatar()" alt="头像" />
           </div>
           <div class="header-info">
-            <div class="chat-name">{{ chatInfo.name || '聊天' }}</div>
-            <div class="chat-meta" v-if="jobInfo.title">
+            <div class="chat-name">
+              <!-- 根据用户角色显示不同的聊天对象信息 -->
+              <template v-if="userRole === 'STUDENT'">
+                {{ chatInfo.name || '聊天' }}
+              </template>
+              <template v-else-if="userRole === 'COMPANY'">
+                {{ studentInfo.realName || '未知学生' }}
+              </template>
+              <template v-else>
+                {{ chatInfo.name || '聊天' }}
+              </template>
+            </div>
+            <div class="chat-meta" v-if="jobInfo.title && userRole === 'STUDENT'">
               <span class="job-title">{{ jobInfo.title }}</span>
+            </div>
+            <div class="chat-meta" v-else-if="userRole === 'COMPANY'">
+              <span class="job-title">{{ studentInfo.university || '未知学校' }}</span>
             </div>
             <div class="chat-status">{{ chatInfo.online ? '在线' : '离线' }}</div>
           </div>
@@ -192,9 +206,9 @@
   import { ref, onMounted, nextTick, computed, watch, onUnmounted } from 'vue'
   import { useRoute, useRouter } from 'vue-router'
   import { format, isToday, isYesterday, isSameDay, parseISO } from 'date-fns'
-  import { getConversationMessages } from '@/api/jobs'
-  import { sendMessageAPI } from '@/api/messages'
-  import { getCompanyByJobId } from '@/api/jobs'
+  import { sendMessageAPI, markConversationAsRead } from '@/api/messages'
+  import { getCompanyByJobId, getConversationMessages } from '@/api/jobs'
+  import { getUserInfo } from '@/api/user'
   import { ElMessage } from 'element-plus'
   import { Document, Loading, CircleClose } from '@element-plus/icons-vue'
   import { getResumePDF, getResumePDFById } from '@/api/resume'
@@ -215,11 +229,18 @@
   const messageText = ref('')
   const messageListRef = ref(null)
   const chatInfo = ref({})
+  const studentInfo = ref({}) // 添加学生信息对象
   const isGroupChat = ref(false)
   const showQuickPhrases = ref(false)
   const jobInfo = ref({
     title: route.query.jobTitle || '',
     id: route.query.jobId || ''
+  })
+  
+  // 获取当前用户角色
+  const userRole = computed(() => {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    return userInfo.role || ''
   })
   
   // 安全地解析日期
@@ -264,6 +285,10 @@
   
   // 获取对方的头像
   const getOtherUserAvatar = () => {
+    // 根据用户角色返回不同的头像
+    if (userRole.value === 'COMPANY' && studentInfo.value.avatar) {
+      return studentInfo.value.avatar;
+    }
     return chatInfo.value.avatar || '/images/default-avatar.png'
   }
   
@@ -330,6 +355,33 @@
         
         console.log('获取到的聊天消息:', messages.value);
         chatInfo.value = res.data.conversationInfo || {};
+        
+        // 如果是企业用户，获取学生信息
+        if (userRole.value === 'COMPANY' && messages.value.length > 0) {
+          const studentId = messages.value.find(m => m.senderRole === 'STUDENT')?.senderId;
+          if (studentId) {
+            try {
+              const res = await getUserInfo(studentId);
+              if (res.code === 200 && res.data) {
+                studentInfo.value = res.data;
+                console.log('获取到学生信息:', studentInfo.value);
+                
+                // 确保调试时可以看到返回的数据结构
+                console.log('学生信息字段:', Object.keys(studentInfo.value));
+              }
+            } catch (error) {
+              console.error('获取学生信息失败:', error);
+            }
+          }
+        }
+        
+        // 自动标记会话中所有消息为已读
+        // try {
+        //   await markConversationAsRead(chatId);
+        //   console.log('所有消息已标记为已读');
+        // } catch (error) {
+        //   console.error('标记消息已读失败:', error);
+        // }
         
         // 获取第一条消息，查找是否包含职位信息
         if (messages.value.length > 0) {
@@ -591,8 +643,8 @@
           const response = await getResumePDFById(lastMsg.senderId)
 
           // 获取二进制数据
-          console.log("response.data: ", response.data);
-          const arrayBuffer = response.data
+          console.log("response.data: ", response);
+          const arrayBuffer = response
           const bytes = new Uint8Array(arrayBuffer)
 
           if (bytes.length === 0) {

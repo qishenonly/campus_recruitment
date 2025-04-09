@@ -23,6 +23,11 @@ public class JobDTO {
     private Long companyId;
 
     /**
+     * 公司实体ID
+     */
+    private Long companyEntityId;
+
+    /**
      * 所属企业名称
      */
     private String companyName;
