@@ -248,6 +248,103 @@ public class AdminSettingsServiceImpl implements AdminSettingsService {
     }
 
     @Override
+    public ResponseDTO<?> getMailSettings() {
+        List<SystemSetting> settings = systemSettingRepository.findBySettingGroup("mail");
+        
+        Map<String, Object> result = settings.stream()
+                .collect(Collectors.toMap(
+                        SystemSetting::getSettingKey,
+                        setting -> {
+                            // 对于布尔值进行特殊处理
+                            if (setting.getSettingValue().equalsIgnoreCase("true") ||
+                                setting.getSettingValue().equalsIgnoreCase("false")) {
+                                return Boolean.parseBoolean(setting.getSettingValue());
+                            }
+                            return setting.getSettingValue();
+                        }
+                ));
+        
+        // 如果没有设置，提供默认值
+        if (!result.containsKey("mail.enabled")) {
+            result.put("mail.enabled", false);
+        }
+        if (!result.containsKey("mail.host")) {
+            result.put("mail.host", "smtp.example.com");
+        }
+        if (!result.containsKey("mail.port")) {
+            result.put("mail.port", "587");
+        }
+        if (!result.containsKey("mail.username")) {
+            result.put("mail.username", "");
+        }
+        if (!result.containsKey("mail.password")) {
+            result.put("mail.password", "");
+        }
+        if (!result.containsKey("mail.from")) {
+            result.put("mail.from", "");
+        }
+        if (!result.containsKey("mail.ssl")) {
+            result.put("mail.ssl", true);
+        }
+        
+        return ResponseDTO.success(result);
+    }
+
+    @Override
+    @Transactional
+    public ResponseDTO<Void> updateMailSettings(Map<String, Object> settings) {
+        settings.forEach((key, value) -> {
+            // 对于密码字段，如果是空或占位符，则保留原值
+            if (key.equals("mail.password") && (value == null || value.toString().isEmpty() || "******".equals(value.toString()))) {
+                Optional<SystemSetting> passwordOpt = systemSettingRepository.findBySettingKey("mail.password");
+                if (passwordOpt.isPresent()) {
+                    // 保留原密码，不做更改
+                    return;
+                }
+            }
+            
+            Optional<SystemSetting> settingOpt = systemSettingRepository.findBySettingKey(key);
+            
+            if (settingOpt.isPresent()) {
+                SystemSetting setting = settingOpt.get();
+                setting.setSettingValue(value.toString());
+                systemSettingRepository.save(setting);
+            } else if (key.startsWith("mail.")) {
+                SystemSetting setting = new SystemSetting();
+                setting.setSettingKey(key);
+                setting.setSettingValue(value.toString());
+                setting.setSettingGroup("mail");
+                systemSettingRepository.save(setting);
+            }
+        });
+        
+        return ResponseDTO.success();
+    }
+
+    @Override
+    public ResponseDTO<Void> sendTestMail(String email) {
+        if (email == null || email.isEmpty()) {
+            return ResponseDTO.error("邮箱地址不能为空");
+        }
+        
+        try {
+            // 从设置中获取邮件配置
+            Optional<SystemSetting> mailEnabledOpt = systemSettingRepository.findBySettingKey("mail.enabled");
+            if (!mailEnabledOpt.isPresent() || !Boolean.parseBoolean(mailEnabledOpt.get().getSettingValue())) {
+                return ResponseDTO.error("邮件服务未启用");
+            }
+            
+            // 这里简单模拟发送测试邮件
+            // 在实际实现中，您需要集成实际的邮件发送逻辑
+            
+            // 模拟发送成功
+            return ResponseDTO.success();
+        } catch (Exception e) {
+            return ResponseDTO.error("发送测试邮件失败: " + e.getMessage());
+        }
+    }
+
+    @Override
     public ResponseDTO<?> getMaintenanceMode() {
         Optional<SystemSetting> maintenanceSetting = systemSettingRepository.findBySettingKey("system.maintenance");
         

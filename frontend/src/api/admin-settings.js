@@ -89,6 +89,43 @@ export function updateSecuritySettings(data) {
 }
 
 /**
+ * 获取邮件设置
+ * @returns {Promise}
+ */
+export function getMailSettings() {
+  return request({
+    url: '/admin/settings/mail',
+    method: 'get'
+  })
+}
+
+/**
+ * 更新邮件设置
+ * @param {Object} data - 邮件设置
+ * @returns {Promise}
+ */
+export function updateMailSettings(data) {
+  return request({
+    url: '/admin/settings/mail',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 发送测试邮件
+ * @param {string} email - 测试邮件地址
+ * @returns {Promise}
+ */
+export function sendTestMail(email) {
+  return request({
+    url: '/admin/settings/mail/test',
+    method: 'post',
+    data: { email }
+  })
+}
+
+/**
  * 获取系统维护状态
  * @returns {Promise}
  */

@@ -71,6 +71,26 @@ public interface AdminSettingsService {
     ResponseDTO<Void> updateSecuritySettings(Map<String, Object> settings);
 
     /**
+     * 获取邮件设置
+     * @return 邮件设置
+     */
+    ResponseDTO<?> getMailSettings();
+
+    /**
+     * 更新邮件设置
+     * @param settings 邮件设置
+     * @return 更新结果
+     */
+    ResponseDTO<Void> updateMailSettings(Map<String, Object> settings);
+
+    /**
+     * 发送测试邮件
+     * @param email 测试邮件地址
+     * @return 发送结果
+     */
+    ResponseDTO<Void> sendTestMail(String email);
+
+    /**
      * 获取系统维护状态
      * @return 系统维护状态
      */

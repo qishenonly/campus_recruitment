@@ -5,6 +5,8 @@ import com.campus.service.EmailService;
 import com.campus.service.UserService;
 import com.campus.service.VerificationCodeService;
 import com.campus.service.UsernameGeneratorService;
+import com.campus.service.RegistrationValidationService;
+import com.campus.dto.ResponseDTO;
 import com.campus.util.JwtUtil;
 import com.campus.util.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,9 @@ public class AuthController {
 
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private RegistrationValidationService registrationValidationService;
 
     @PostMapping("/send-verification")
     public ResponseEntity<?> sendVerificationEmail(@RequestBody Map<String, String> request) {
@@ -105,6 +110,52 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
         
+        // 验证是否允许注册
+        ResponseDTO<Void> registerEnabledResult = registrationValidationService.validateRegistrationEnabled();
+        if (registerEnabledResult != null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("message", registerEnabledResult.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+        
+        // 根据角色验证是否允许该类型用户注册
+        if ("student".equalsIgnoreCase(role)) {
+            ResponseDTO<Void> studentRegisterResult = registrationValidationService.validateStudentRegistrationEnabled();
+            if (studentRegisterResult != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 400);
+                response.put("message", studentRegisterResult.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // 验证学生邮箱
+            ResponseDTO<Void> emailValidateResult = registrationValidationService.validateStudentEmail(email);
+            if (emailValidateResult != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 400);
+                response.put("message", emailValidateResult.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+        } else if ("company".equalsIgnoreCase(role)) {
+            ResponseDTO<Void> companyRegisterResult = registrationValidationService.validateCompanyRegistrationEnabled();
+            if (companyRegisterResult != null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 400);
+                response.put("message", companyRegisterResult.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+        }
+        
+        // 验证密码复杂度
+        ResponseDTO<Void> passwordValidateResult = registrationValidationService.validatePassword(password);
+        if (passwordValidateResult != null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("message", passwordValidateResult.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+        
         // 验证验证码
         if (!verificationCodeService.verifyCode(email, code)) {
             Map<String, Object> response = new HashMap<>();
@@ -136,7 +187,15 @@ public class AuthController {
             user.setRole(User.UserRole.valueOf(role.toUpperCase()));
             user.setCreateTime(LocalDateTime.now());
             user.setUpdateTime(LocalDateTime.now());
-            user.setStatus(User.UserStatus.ACTIVE);
+            
+            // 如果是企业用户，需要根据系统设置确定状态
+            if (user.getRole() == User.UserRole.COMPANY) {
+                // 检查企业是否需要审核
+                boolean companyNeedVerify = checkCompanyNeedVerify();
+                user.setStatus(companyNeedVerify ? User.UserStatus.INACTIVE : User.UserStatus.ACTIVE);
+            } else {
+                user.setStatus(User.UserStatus.ACTIVE); // 默认激活状态
+            }
             
             userService.save(user);
             
@@ -147,7 +206,8 @@ public class AuthController {
             response.put("data", Map.of(
                 "username", username,
                 "email", email,
-                "role", role
+                "role", role,
+                "status", user.getStatus().toString()
             ));
             return ResponseEntity.ok(response);
             
@@ -157,6 +217,15 @@ public class AuthController {
             response.put("message", "注册失败：" + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
+    }
+    
+    /**
+     * 检查企业是否需要审核
+     * @return 是否需要审核
+     */
+    private boolean checkCompanyNeedVerify() {
+        // 通过系统设置查询企业是否需要审核
+        return userService.getSystemSettingBooleanValue("register.companyNeedVerify", true);
     }
 
     private String generateVerificationCode() {

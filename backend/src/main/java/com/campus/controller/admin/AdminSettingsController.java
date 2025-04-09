@@ -111,6 +111,37 @@ public class AdminSettingsController {
     }
 
     /**
+     * 获取邮件设置
+     * @return 邮件设置
+     */
+    @GetMapping("/mail")
+    public ResponseDTO<?> getMailSettings() {
+        return adminSettingsService.getMailSettings();
+    }
+
+    /**
+     * 更新邮件设置
+     * @param settings 邮件设置
+     * @return 更新结果
+     */
+    @PutMapping("/mail")
+    @OperationLog(operationType = "系统设置", description = "更新邮件设置")
+    public ResponseDTO<Void> updateMailSettings(@RequestBody Map<String, Object> settings) {
+        return adminSettingsService.updateMailSettings(settings);
+    }
+
+    /**
+     * 发送测试邮件
+     * @param testMail 测试邮件地址
+     * @return 发送结果
+     */
+    @PostMapping("/mail/test")
+    @OperationLog(operationType = "系统设置", description = "发送测试邮件")
+    public ResponseDTO<Void> sendTestMail(@RequestBody Map<String, String> testMail) {
+        return adminSettingsService.sendTestMail(testMail.get("email"));
+    }
+
+    /**
      * 获取系统维护状态
      * @return 系统维护状态
      */

@@ -174,6 +174,57 @@
         </el-form>
       </el-tab-pane>
       
+      <!-- 邮件设置 -->
+      <el-tab-pane label="邮件设置" name="mail">
+        <el-form :model="mailSettings" label-width="180px" class="settings-form">
+          <el-form-item label="启用邮件服务">
+            <el-switch v-model="mailSettings.enableMail" />
+          </el-form-item>
+          
+          <template v-if="mailSettings.enableMail">
+            <el-form-item label="SMTP服务器">
+              <el-input v-model="mailSettings.host" placeholder="例如: smtp.example.com" />
+            </el-form-item>
+            
+            <el-form-item label="SMTP端口">
+              <el-input-number v-model="mailSettings.port" :min="1" :max="65535" />
+              <div class="form-hint">常用端口: 25, 465(SSL), 587(TLS)</div>
+            </el-form-item>
+            
+            <el-form-item label="使用SSL/TLS">
+              <el-switch v-model="mailSettings.ssl" />
+            </el-form-item>
+            
+            <el-form-item label="邮箱账号">
+              <el-input v-model="mailSettings.username" placeholder="请输入邮箱账号" />
+            </el-form-item>
+            
+            <el-form-item label="邮箱密码">
+              <el-input v-model="mailSettings.password" type="password" placeholder="请输入邮箱密码" show-password />
+            </el-form-item>
+            
+            <el-form-item label="发件人邮箱">
+              <el-input v-model="mailSettings.from" placeholder="例如: noreply@example.com" />
+            </el-form-item>
+            
+            <el-divider />
+            
+            <el-form-item label="测试邮件">
+              <div class="test-mail-wrapper">
+                <el-input v-model="testMailAddress" placeholder="请输入接收测试邮件的邮箱地址" />
+                <el-button type="primary" @click="handleSendTestMail" :loading="sendingTestMail">
+                  <el-icon><i-ep-message /></el-icon>发送测试邮件
+                </el-button>
+              </div>
+            </el-form-item>
+          </template>
+          
+          <el-form-item>
+            <el-button type="primary" @click="saveMailSettings">保存邮件设置</el-button>
+          </el-form-item>
+        </el-form>
+      </el-tab-pane>
+      
       <!-- 系统维护 -->
       <el-tab-pane label="系统维护" name="maintenance">
         <el-card class="warning-card">
@@ -334,6 +385,9 @@ import {
   updateRegisterSettings,
   getSecuritySettings,
   updateSecuritySettings,
+  getMailSettings,
+  updateMailSettings,
+  sendTestMail,
   getMaintenanceMode,
   toggleMaintenanceMode,
   backupSystem,
@@ -382,10 +436,25 @@ const securitySettings = reactive({
   sessionTimeout: 120
 });
 
+// 邮件设置
+const mailSettings = reactive({
+  enableMail: false,
+  host: 'smtp.example.com',
+  port: 587,
+  ssl: true,
+  username: '',
+  password: '',
+  from: ''
+});
+
 // 系统维护设置
 const maintenanceSettings = reactive({
   maintenanceMode: false
 });
+
+// 邮件测试
+const testMailAddress = ref('');
+const sendingTestMail = ref(false);
 
 // 个人设置
 const personalSettings = reactive({
@@ -506,6 +575,26 @@ const loadSettings = () => {
     console.error('获取维护模式状态失败:', error);
     ElMessage.warning('获取维护模式状态失败，将使用默认设置');
   });
+  
+  // 加载邮件设置
+  getMailSettings().then(res => {
+    if (res.code === 200) {
+      // 将后端的mail.enabled映射到前端的enableMail
+      mailSettings.enableMail = res.data['mail.enabled'] || false;
+      // 映射其他字段
+      mailSettings.host = res.data['mail.host'] || 'smtp.example.com';
+      mailSettings.port = parseInt(res.data['mail.port']) || 587;
+      mailSettings.ssl = res.data['mail.ssl'] || true;
+      mailSettings.username = res.data['mail.username'] || '';
+      mailSettings.password = res.data['mail.password'] ? '******' : ''; // 密码使用占位符
+      mailSettings.from = res.data['mail.from'] || '';
+    } else {
+      ElMessage.warning(res.message || '获取邮件设置失败');
+    }
+  }).catch(error => {
+    console.error('获取邮件设置失败:', error);
+    ElMessage.warning('获取邮件设置失败，将使用默认设置');
+  });
 };
 
 // 保存所有设置
@@ -514,6 +603,7 @@ const saveAllSettings = () => {
     saveBasicSettings(),
     saveRegisterSettings(),
     saveSecuritySettings(),
+    saveMailSettings(),
     savePersonalSettings()
   ]).then(() => {
     ElMessage.success('所有设置已保存');
@@ -559,6 +649,61 @@ const saveSecuritySettings = () => {
   }).catch(error => {
     console.error('保存安全设置失败:', error);
     ElMessage.error('保存安全设置失败');
+  });
+};
+
+// 保存邮件设置
+const saveMailSettings = () => {
+  // 将前端的数据模型转换为后端需要的键值对格式
+  const mailSettingsData = {
+    'mail.enabled': mailSettings.enableMail,
+    'mail.host': mailSettings.host,
+    'mail.port': mailSettings.port,
+    'mail.ssl': mailSettings.ssl,
+    'mail.username': mailSettings.username,
+    'mail.from': mailSettings.from
+  };
+  
+  // 只有当密码不是占位符时才更新密码
+  if (mailSettings.password && mailSettings.password !== '******') {
+    mailSettingsData['mail.password'] = mailSettings.password;
+  }
+  
+  return updateMailSettings(mailSettingsData).then(res => {
+    if (res.code === 200) {
+      ElMessage.success('邮件设置已保存');
+    } else {
+      ElMessage.error(res.message || '保存邮件设置失败');
+    }
+  }).catch(error => {
+    console.error('保存邮件设置失败:', error);
+    ElMessage.error('保存邮件设置失败');
+  });
+};
+
+// 发送测试邮件
+const handleSendTestMail = () => {
+  if (!testMailAddress.value) {
+    ElMessage.warning('请输入测试邮箱地址');
+    return;
+  }
+  
+  sendingTestMail.value = true;
+  
+  // 发送测试邮件前先保存设置
+  saveMailSettings().then(() => {
+    return sendTestMail(testMailAddress.value);
+  }).then(res => {
+    if (res.code === 200) {
+      ElMessage.success('测试邮件已发送，请检查收件箱');
+    } else {
+      ElMessage.error(res.message || '发送测试邮件失败');
+    }
+  }).catch(error => {
+    console.error('发送测试邮件失败:', error);
+    ElMessage.error('发送测试邮件失败: ' + (error.message || '服务器错误'));
+  }).finally(() => {
+    sendingTestMail.value = false;
   });
 };
 
@@ -905,6 +1050,11 @@ onMounted(() => {
 .danger-header {
   background-color: #fef0f0;
   color: #f56c6c;
+}
+
+.test-mail-wrapper {
+  display: flex;
+  gap: 16px;
 }
 
 @media (max-width: 768px) {
