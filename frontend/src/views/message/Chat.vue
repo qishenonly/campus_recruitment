@@ -221,6 +221,39 @@
     import.meta.url
   ).href
     
+  // 处理头像URL的方法
+  const getAvatarUrl = (url) => {
+    if (!url) return '';
+    
+    // 确保URL中包含/api前缀
+    if (!url.startsWith('/api') && !url.startsWith('http')) {
+      if (url.startsWith('/')) {
+        url = '/api' + url;
+      } else {
+        url = '/api/' + url;
+      }
+    }
+    
+    // 如果URL以/api开头但不是完整URL，添加基础路径
+    if (url.startsWith('/api') && !url.startsWith('http')) {
+      const baseURL = import.meta.env.VITE_API_URL || '';
+      // 如果基础URL已经包含/api，避免重复
+      if (baseURL && baseURL.endsWith('/api')) {
+        url = baseURL + url.substring(4); // 移除/api
+      } else if (baseURL) {
+        // 确保baseURL和url之间没有重复的斜杠
+        if (baseURL.endsWith('/') && url.startsWith('/')) {
+          url = baseURL + url.substring(1);
+        } else if (!baseURL.endsWith('/') && !url.startsWith('/')) {
+          url = baseURL + '/' + url;
+        } else {
+          url = baseURL + url;
+        }
+      }
+    }
+    
+    return url;
+  }
 
   const route = useRoute()
   const router = useRouter()
@@ -280,16 +313,16 @@
   
   // 获取自己的头像
   const getSelfAvatar = () => {
-    return userInfo.value.avatar || '/images/default-avatar.png'
+    return getAvatarUrl(userInfo.value.avatar) || '/images/default-avatar.png'
   }
   
   // 获取对方的头像
   const getOtherUserAvatar = () => {
     // 根据用户角色返回不同的头像
     if (userRole.value === 'COMPANY' && studentInfo.value.avatar) {
-      return studentInfo.value.avatar;
+      return getAvatarUrl(studentInfo.value.avatar);
     }
-    return chatInfo.value.avatar || '/images/default-avatar.png'
+    return getAvatarUrl(chatInfo.value.avatar) || '/images/default-avatar.png'
   }
   
   // 判断是否需要显示日期分割线
@@ -622,7 +655,7 @@
   const isResumeLink = (content) => {
     return content && content.includes('简历，您可以查看')
   }
-  
+
   function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }

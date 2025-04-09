@@ -22,6 +22,12 @@
           <template v-else>
             <div class="user-actions">
               <router-link to="/mine" class="user-info">
+                <img 
+                  v-if="userInfo && userInfo.avatar" 
+                  :src="getAvatarUrl(userInfo.avatar)" 
+                  class="user-avatar" 
+                  alt="用户头像"
+                />
                 <span class="user-name">{{ userInfo.username }}</span>
               </router-link>
               <span class="divider">|</span>
@@ -67,6 +73,40 @@ const router = useRouter()
 const dialogStore = useDialogStore()
 // 从 localStorage 获取用户信息
 const userInfo = ref(JSON.parse(localStorage.getItem('userInfo')))
+
+// 处理头像URL的方法
+const getAvatarUrl = (url) => {
+  if (!url) return '/default-avatar.png';
+  
+  // 确保URL中包含/api前缀
+  if (!url.startsWith('/api') && !url.startsWith('http')) {
+    if (url.startsWith('/')) {
+      url = '/api' + url;
+    } else {
+      url = '/api/' + url;
+    }
+  }
+  
+  // 如果URL以/api开头但不是完整URL，添加基础路径
+  if (url.startsWith('/api') && !url.startsWith('http')) {
+    const baseURL = import.meta.env.VITE_API_URL || '';
+    // 如果基础URL已经包含/api，避免重复
+    if (baseURL && baseURL.endsWith('/api')) {
+      url = baseURL + url.substring(4); // 移除/api
+    } else if (baseURL) {
+      // 确保baseURL和url之间没有重复的斜杠
+      if (baseURL.endsWith('/') && url.startsWith('/')) {
+        url = baseURL + url.substring(1);
+      } else if (!baseURL.endsWith('/') && !url.startsWith('/')) {
+        url = baseURL + '/' + url;
+      } else {
+        url = baseURL + url;
+      }
+    }
+  }
+  
+  return url;
+}
 
 // 退出登录
 const handleLogout = () => {
@@ -156,6 +196,16 @@ const handleLogout = () => {
 
 .user-info {
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .user-name {

@@ -34,7 +34,7 @@
                   round
                   width="50"
                   height="50"
-                  :src="conversation.userInfo?.avatar || '/default-avatar.png'"
+                  :src="getAvatarUrl(conversation.userInfo?.avatar)"
                   fit="cover"
                 />
                 <div class="online-status"></div>
@@ -54,7 +54,9 @@
                 </div>
                 <div class="message-preview">
                   <div class="preview-container">
-                    <span class="preview-text">{{ conversation.content || '暂无消息' }}</span>
+                    <span class="preview-text" :title="getMessageContent(conversation)">
+                      {{ '最近一条消息：' + truncateText(getMessageContent(conversation)) }}
+                    </span>
                     <span v-if="conversation.jobTitle" class="job-tag">{{ conversation.jobTitle }}</span>
                   </div>
                   <div v-if="conversation.unreadCount" class="unread-count">
@@ -92,6 +94,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { formatDistance } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
 import { getConversations, markMessageAsRead } from '@/api/messages'
+import { getConversationMessages } from '@/api/jobs'
 import { formatTime } from '@/utils/format'
 import { getUserInfo } from '@/api/user'
 import { getCompanyByJobId } from '@/api/jobs'
@@ -110,6 +113,40 @@ const refreshing = ref(false)
 const conversations = ref([])
 const userInfoMap = ref(new Map()) // 存储用户信息的Map
 const userRole = localStorage.getItem('userInfo') ? JSON.parse(localStorage.getItem('userInfo')).role : null;
+
+// 处理头像URL的方法
+const getAvatarUrl = (url) => {
+  if (!url) return '/default-avatar.png';
+  
+  // 确保URL中包含/api前缀
+  if (!url.startsWith('/api') && !url.startsWith('http')) {
+    if (url.startsWith('/')) {
+      url = '/api' + url;
+    } else {
+      url = '/api/' + url;
+    }
+  }
+  
+  // 如果URL以/api开头但不是完整URL，添加基础路径
+  if (url.startsWith('/api') && !url.startsWith('http')) {
+    const baseURL = import.meta.env.VITE_API_URL || '';
+    // 如果基础URL已经包含/api，避免重复
+    if (baseURL && baseURL.endsWith('/api')) {
+      url = baseURL + url.substring(4); // 移除/api
+    } else if (baseURL) {
+      // 确保baseURL和url之间没有重复的斜杠
+      if (baseURL.endsWith('/') && url.startsWith('/')) {
+        url = baseURL + url.substring(1);
+      } else if (!baseURL.endsWith('/') && !url.startsWith('/')) {
+        url = baseURL + '/' + url;
+      } else {
+        url = baseURL + url;
+      }
+    }
+  }
+  
+  return url;
+}
 
 // 根据用户角色显示不同的标签
 const tabs = ref([
@@ -237,9 +274,44 @@ const fetchConversations = async () => {
     console.log('会话原始数据:', res.data)
     const newConversations = res.data.content || []
     
+    // 增加详细日志输出，查看完整的数据结构
+    console.log('完整API响应:', res)
+    console.log('会话列表数组结构:', newConversations)
+    if (newConversations.length > 0) {
+      console.log('第一个会话详细信息:', JSON.stringify(newConversations[0], null, 2))
+    }
+    
+    // 为每个会话获取最新消息
+    await Promise.all(
+      newConversations.map(async (conv) => {
+        try {
+          // 获取会话的消息
+          const messagesResponse = await getConversationMessages(conv.id);
+          console.log(`会话${conv.id}的消息:`, messagesResponse);
+          
+          if (messagesResponse.code === 200 && messagesResponse.data.length > 0) {
+            // 按时间排序，获取最新的消息
+            const sortedMessages = [...messagesResponse.data].sort((a, b) => 
+              new Date(b.createTime) - new Date(a.createTime)
+            );
+            
+            // 保存最新消息
+            conv.lastMessage = sortedMessages[0];
+            conv.lastMessageContent = sortedMessages[0].content;
+            console.log(`会话${conv.id}的最新消息:`, conv.lastMessageContent);
+          } else {
+            conv.lastMessageContent = '暂无消息内容';
+          }
+        } catch (error) {
+          console.error(`获取会话${conv.id}的消息失败:`, error);
+          conv.lastMessageContent = '获取消息失败';
+        }
+      })
+    );
+    
     // 处理每个对话，确保包含必要的信息
     for (const conv of newConversations) {
-      console.log('处理会话:', conv)
+      console.log('处理会话完整数据:', conv) // 输出完整会话对象
       
       // 根据当前用户的角色判断需要获取 studentId 还是 companyId
       if (userRole === 'STUDENT') {
@@ -398,7 +470,35 @@ const loadMore = async () => {
     
     // 处理每个对话，确保包含必要的信息
     for (const conv of newConversations) {
-      console.log('处理加载更多会话:', conv)
+      console.log('处理加载更多会话完整数据:', conv) // 输出完整会话对象
+      
+      // 处理最新消息内容
+      if (conv.lastMessage) {
+        // 如果有lastMessage对象，直接使用
+        console.log('会话有lastMessage字段:', conv.lastMessage)
+        conv.lastMessageContent = conv.lastMessage.content
+      } else if (conv.messages && conv.messages.length > 0) {
+        // 如果有messages数组，取最新的一条消息
+        const lastMsg = conv.messages[conv.messages.length - 1]
+        conv.lastMessage = lastMsg
+        conv.lastMessageContent = lastMsg.content
+        console.log('从messages数组获取最新消息:', lastMsg)
+      } else if (conv.firstMessage && conv.firstMessage.content) { 
+        // 如果有firstMessage字段，也可能包含消息内容
+        conv.lastMessageContent = conv.firstMessage.content
+        console.log('从firstMessage获取消息内容:', conv.firstMessage.content)
+      } else if (conv.lastMessageContent) {
+        // 如果有lastMessageContent字段，直接使用
+        console.log('会话有lastMessageContent字段:', conv.lastMessageContent)
+      } else if (conv.content) {
+        // 如果有content字段，可能是消息内容
+        conv.lastMessageContent = conv.content
+        console.log('使用content字段作为消息内容:', conv.content)
+      } else {
+        // 如果没有任何消息相关字段，设置一个默认值
+        conv.lastMessageContent = '暂无消息内容'
+        console.log('未找到任何消息内容，使用默认值')
+      }
       
       // 根据当前用户的角色判断需要获取 studentId 还是 companyId
       if (userRole === 'STUDENT') {
@@ -491,6 +591,62 @@ const loadMore = async () => {
   }
 }
 
+// 添加文本截断过滤器
+const truncateText = (text) => {
+  if (!text) return '暂无消息';
+  return text.length > 30 ? text.substring(0, 30) + '...' : text;
+}
+
+// 获取消息内容的方法
+const getMessageContent = (conversation) => {
+  // 打印当前对话的所有字段，用于调试
+  console.log('获取消息内容, 当前对话:', conversation);
+  
+  // 按优先级检查各种可能包含消息内容的字段
+  if (conversation.lastMessageContent) {
+    console.log('使用lastMessageContent:', conversation.lastMessageContent);
+    return conversation.lastMessageContent;
+  }
+  
+  if (conversation.lastMessage && conversation.lastMessage.content) {
+    console.log('使用lastMessage.content:', conversation.lastMessage.content);
+    return conversation.lastMessage.content;
+  }
+  
+  if (conversation.latestMessage && conversation.latestMessage.content) {
+    console.log('使用latestMessage.content:', conversation.latestMessage.content);
+    return conversation.latestMessage.content;
+  }
+  
+  if (conversation.message && conversation.message.content) {
+    console.log('使用message.content:', conversation.message.content);
+    return conversation.message.content;
+  }
+  
+  if (conversation.lastMessages && conversation.lastMessages.length > 0) {
+    console.log('使用lastMessages中的第一条:', conversation.lastMessages[0].content);
+    return conversation.lastMessages[0].content;
+  }
+  
+  if (conversation.recentMessage && conversation.recentMessage.content) {
+    console.log('使用recentMessage.content:', conversation.recentMessage.content);
+    return conversation.recentMessage.content;
+  }
+  
+  if (conversation.content) {
+    console.log('使用content:', conversation.content);
+    return conversation.content;
+  }
+  
+  if (conversation.firstMessage && conversation.firstMessage.content) {
+    console.log('使用firstMessage.content:', conversation.firstMessage.content);
+    return conversation.firstMessage.content;
+  }
+  
+  console.log('未找到任何消息内容');
+  return '暂无消息';
+}
+
 onMounted(() => {
   fetchConversations()
   // 如果URL中有chatId参数,则打开对应的聊天
@@ -515,6 +671,8 @@ const openChat = (chatId) => {
   border-radius: 8px;
   padding: 20px;
   min-height: 600px;
+  --primary-color: #2b7efb;
+  --primary-color-rgb: 43, 126, 251;
 }
 
 .message-tabs {
@@ -647,46 +805,47 @@ const openChat = (chatId) => {
 }
 
 .preview-container {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
-  flex: 1;
-  overflow: hidden;
+  gap: 8px;
 }
 
 .preview-text {
-  color: #666;
+  color: #999;
   font-size: 14px;
-  white-space: nowrap;
+  max-width: 100%;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
-  max-width: 70%;
+  flex: 1;
+  min-width: 0;
 }
 
 .job-tag {
-  background-color: #409EFF;
-  color: white;
   font-size: 12px;
+  color: var(--primary-color);
+  background-color: rgba(var(--primary-color-rgb), 0.1);
   padding: 2px 6px;
   border-radius: 4px;
-  margin-left: 8px;
   white-space: nowrap;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 30%;
   flex-shrink: 0;
 }
 
 .unread-count {
-  background-color: #f56c6c;
+  background-color: var(--primary-color);
   color: white;
-  border-radius: 10px;
-  min-width: 18px;
-  height: 18px;
   font-size: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
   margin-left: 8px;
   flex-shrink: 0;
 }

@@ -14,12 +14,16 @@
             <el-form-item label="头像">
               <el-upload
                 class="avatar-uploader"
-                :action="avatarUploadUrl"
-                :headers="headers"
+                :http-request="handleAvatarUpload"
                 :show-file-list="false"
-                :on-success="handleAvatarSuccess"
                 :before-upload="beforeAvatarUpload">
-                <img v-if="profileForm.avatar" :src="profileForm.avatar" class="avatar" />
+                <img 
+                  v-if="profileForm.avatar" 
+                  :src="getAvatarUrl(profileForm.avatar)" 
+                  class="avatar" 
+                  alt="用户头像" 
+                  @error="handleAvatarError"
+                />
                 <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
               </el-upload>
               <div class="upload-tip">推荐尺寸: 200px × 200px，支持jpg、png格式</div>
@@ -257,13 +261,24 @@ import {
   bindEmail 
 } from '@/api/userSettings'
 
+// 获取基础 API URL
+const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+
 // 当前激活的标签页
 const activeTab = ref('profile')
 
-// 上传URL和请求头
-const avatarUploadUrl = '/api/user/avatar'
-const headers = {
-  Authorization: `Bearer ${localStorage.getItem('token')}`
+// 构建完整的头像URL
+const getAvatarUrl = (avatarPath) => {
+  if (!avatarPath) return '';
+  
+  // 如果头像路径已经是完整的URL，直接返回
+  if (avatarPath.startsWith('http')) {
+    return avatarPath;
+  }
+  
+  // 确保路径以/开头
+  const path = avatarPath.startsWith('/') ? avatarPath : '/' + avatarPath;
+  return apiBaseUrl + path;
 }
 
 // 个人信息表单
@@ -397,24 +412,33 @@ const loginDevices = ref([
 // 获取用户信息
 const fetchUserProfile = async () => {
   try {
-    const res = await getUserProfile()
+    const res = await getUserProfile();
+    console.log('获取用户信息响应:', res);
+    
     if (res.code === 200) {
-      const data = res.data
+      const data = res.data;
+      
+      // 直接使用后端返回的头像URL，不做额外处理
+      let avatarUrl = data.avatar || '';
+      
       profileForm.value = {
-        avatar: data.avatar || '',
+        avatar: avatarUrl,
         username: data.username || '',
         realName: data.realName || '',
         email: data.email || '',
         phone: data.phone || ''
-      }
+      };
+      
+      console.log('获取到的用户信息:', data);
+      console.log('使用的头像URL:', avatarUrl);
       
       // 初始化绑定表单
-      phoneForm.value.phone = data.phone || ''
-      emailForm.value.email = data.email || ''
+      phoneForm.value.phone = data.phone || '';
+      emailForm.value.email = data.email || '';
     }
   } catch (error) {
-    console.error('获取用户信息失败:', error)
-    ElMessage.error('获取用户信息失败')
+    console.error('获取用户信息失败:', error);
+    ElMessage.error('获取用户信息失败');
   }
 }
 
@@ -474,29 +498,115 @@ const resetPasswordForm = () => {
 }
 
 // 头像上传相关
-const handleAvatarSuccess = (res, file) => {
-  if (res.code === 200) {
-    profileForm.value.avatar = res.data.url
-    ElMessage.success('头像上传成功')
-  } else {
-    ElMessage.error(res.message || '头像上传失败')
+const handleAvatarUpload = async (options) => {
+  try {
+    // 创建FormData
+    const formData = new FormData();
+    formData.append('file', options.file);
+    
+    // 调用API上传
+    const res = await uploadUserAvatar(formData);
+    console.log('上传头像API响应:', res);
+    
+    if (res.code === 200) {
+      console.log('头像上传成功，返回数据:', res.data);
+      
+      // 获取正确的URL路径
+      let avatarUrl = res.data.url;
+      
+      // 确保URL中包含/api前缀
+      if (avatarUrl) {
+        // 检查URL是否已经包含/api前缀
+        if (!avatarUrl.startsWith('/api') && !avatarUrl.startsWith('http')) {
+          if (avatarUrl.startsWith('/')) {
+            avatarUrl = '/api' + avatarUrl;
+          } else {
+            avatarUrl = '/api/' + avatarUrl;
+          }
+        }
+        
+        // 如果URL以/api开头但不是完整URL，添加基础路径
+        if (avatarUrl.startsWith('/api') && !avatarUrl.startsWith('http')) {
+          const baseURL = import.meta.env.VITE_API_URL || '';
+          // 如果基础URL已经包含/api，避免重复
+          if (baseURL && baseURL.endsWith('/api')) {
+            avatarUrl = baseURL + avatarUrl.substring(4); // 移除/api
+          } else if (baseURL) {
+            // 确保baseURL和avatarUrl之间没有重复的斜杠
+            if (baseURL.endsWith('/') && avatarUrl.startsWith('/')) {
+              avatarUrl = baseURL + avatarUrl.substring(1);
+            } else if (!baseURL.endsWith('/') && !avatarUrl.startsWith('/')) {
+              avatarUrl = baseURL + '/' + avatarUrl;
+            } else {
+              avatarUrl = baseURL + avatarUrl;
+            }
+          }
+        }
+      }
+      
+      console.log('最终使用的头像URL:', avatarUrl);
+      profileForm.value.avatar = avatarUrl;
+      ElMessage.success('头像上传成功');
+      
+      // 更新本地存储的用户信息
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      userInfo.avatar = avatarUrl;
+      localStorage.setItem('userInfo', JSON.stringify(userInfo));
+      
+      // 添加时间戳参数，防止浏览器缓存
+      const img = document.querySelector('.avatar');
+      if (img) {
+        img.src = avatarUrl + '?t=' + new Date().getTime();
+      }
+    } else {
+      console.error('头像上传失败，返回数据:', res);
+      ElMessage.error(res.message || '头像上传失败');
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error);
+    ElMessage.error('头像上传失败: ' + (error.message || '未知错误'));
   }
 }
 
 const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg'
-  const isPNG = file.type === 'image/png'
-  const isLt2M = file.size / 1024 / 1024 < 2
+  console.log('准备上传的文件:', file);
+  console.log('文件类型:', file.type);
+  console.log('文件大小:', file.size / 1024 / 1024, 'MB');
+  
+  const isJPG = file.type === 'image/jpeg';
+  const isPNG = file.type === 'image/png';
+  const isLt2M = file.size / 1024 / 1024 < 2;
 
   if (!isJPG && !isPNG) {
-    ElMessage.error('上传头像图片只能是 JPG 或 PNG 格式!')
-    return false
+    ElMessage.error('上传头像图片只能是 JPG 或 PNG 格式!');
+    return false;
   }
   if (!isLt2M) {
-    ElMessage.error('上传头像图片大小不能超过 2MB!')
-    return false
+    ElMessage.error('上传头像图片大小不能超过 2MB!');
+    return false;
   }
-  return true
+  
+  // 检查文件名是否有中文（有些服务器可能会有问题）
+  if (/[\u4e00-\u9fa5]/.test(file.name)) {
+    // 不直接阻止上传，但给出警告
+    console.warn('文件名包含中文，可能在某些服务器上出现问题');
+    ElMessage.warning('文件名包含中文，建议使用英文命名');
+  }
+  
+  console.log('文件校验通过，准备上传');
+  return true;
+}
+
+// 添加处理头像加载错误的方法
+const handleAvatarError = (e) => {
+  console.error('头像加载失败:', e);
+  // 记录当前URL
+  const currentUrl = e.target.src;
+  console.log('加载失败的URL:', currentUrl);
+  console.log('原始头像URL:', profileForm.value.avatar);
+  
+  // 直接使用默认头像，不再尝试修复
+  e.target.src = '/default-avatar.png';
 }
 
 // 绑定手机号相关
@@ -696,6 +806,16 @@ onUnmounted(() => {
   height: 178px;
   display: block;
   object-fit: cover;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.avatar[src=""] {
+  display: none;
+}
+
+.avatar:hover {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .upload-tip {

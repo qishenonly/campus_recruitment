@@ -73,4 +73,11 @@ public interface JobRepository extends JpaRepository<Job, Long> {
      * @return 职位数量
      */
     long countByPublishDateBefore(LocalDateTime dateTime);
+
+    /**
+     * 统计指定企业的职位数量
+     * @param companyId 企业ID
+     * @return 职位数量
+     */
+    long countByCompanyId(Long companyId);
 } 

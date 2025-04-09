@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/company/employee")
@@ -253,6 +254,57 @@ public class CompanyEmployeeController {
             Map<String, Object> response = new HashMap<>();
             response.put("code", 500);
             response.put("message", "申请状态更新失败：" + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * 获取企业统计信息（职位数量、收到的简历数量等）
+     * @param request HTTP请求
+     * @return 企业统计信息
+     */
+    @GetMapping("/dashboard")
+    public ResponseEntity<?> getCompanyDashboard(HttpServletRequest request) {
+        try {
+            // 获取当前用户
+            String token = request.getHeader("Authorization").replace("Bearer ", "");
+            Long userId = JwtUtil.getUserIdFromToken(token);
+            
+            // 查询企业ID
+            Long companyId = companyService.findCompanyIdByUserId(userId);
+            if (companyId == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("code", 400);
+                response.put("message", "未找到关联企业");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            // 查询统计数据
+            Map<String, Object> dashboardData = new HashMap<>();
+            
+            // 查询该企业发布的职位数量
+            long jobCount = jobService.countByCompanyId(companyId);
+            dashboardData.put("jobPostings", jobCount);
+            
+            // 查询该企业收到的简历数量
+            long applicationCount = jobService.countApplicationsByCompanyId(companyId);
+            dashboardData.put("totalApplications", applicationCount);
+            
+            // 查询进行中的面试数量
+            long interviewCount = jobService.countInterviewsByCompanyIdAndStatus(
+                companyId, "SCHEDULED");  // 假设SCHEDULED表示已安排的面试
+            dashboardData.put("interviewCount", interviewCount);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "获取企业统计信息成功");
+            response.put("data", dashboardData);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("message", "获取企业统计信息失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }

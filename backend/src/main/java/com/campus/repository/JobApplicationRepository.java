@@ -63,4 +63,12 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
      * @return 职位申请数量
      */
     long countByCreateTimeBetween(LocalDateTime startDateTime, LocalDateTime endDateTime);
+
+    /**
+     * 统计指定企业收到的职位申请数量
+     * @param companyId 企业ID
+     * @return 职位申请数量
+     */
+    @Query("SELECT COUNT(ja) FROM JobApplication ja JOIN Job j ON ja.jobId = j.id WHERE j.companyId = :companyId")
+    long countByJobCompanyId(Long companyId);
 } 

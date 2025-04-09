@@ -169,8 +169,11 @@ public class StudentSettingsServiceImpl implements StudentSettingsService {
         Path filePath = Paths.get(avatarDir, fileName);
         Files.copy(file.getInputStream(), filePath);
         
-        // 构建访问URL
-        String avatarUrl = accessPath + "/user/avatar/" + fileName;
+        // 构建访问URL - 使用与UserSettingsServiceImpl相同的格式
+        String avatarUrl = "/api/files/resumes/user/avatar/" + fileName;
+        
+        log.info("文件实际存储路径: {}", filePath.toAbsolutePath());
+        log.info("生成的访问URL: {}", avatarUrl);
         
         // 更新用户头像
         user.setAvatar(avatarUrl);

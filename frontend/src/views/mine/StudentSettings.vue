@@ -21,7 +21,7 @@
               <div class="avatar-wrapper">
                 <el-avatar 
                   :size="80" 
-                  :src="profileForm.avatar || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" 
+                  :src="getAvatarUrl(profileForm.avatar) || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'" 
                 />
                 <el-upload
                   class="avatar-uploader"
@@ -260,6 +260,28 @@ import {
   sendStudentEmailCode,
   bindStudentEmail
 } from '@/api/studentSettings'
+
+// 获取API基础URL
+const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+
+// 构建头像URL的方法
+const getAvatarUrl = (avatar) => {
+  if (!avatar) return '';
+  
+  // 如果已经是完整URL，直接返回
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+    return avatar;
+  }
+  
+  // 确保URL有正确的格式
+  if (avatar.startsWith('/api/')) {
+    return apiBaseUrl + avatar.substring(4); // 去掉/api前缀，因为apiBaseUrl中可能已经包含了它
+  } else if (avatar.startsWith('/')) {
+    return apiBaseUrl + avatar;
+  } else {
+    return apiBaseUrl + '/' + avatar;
+  }
+}
 
 // 当前激活的标签页
 const activeTab = ref('profile')
@@ -521,13 +543,24 @@ const uploadAvatar = async (options) => {
     
     if (res.code === 200) {
       if (res.data && res.data.url) {
-        profileForm.avatar = res.data.url
-        ElMessage.success('头像上传成功')
+        // 使用getAvatarUrl方法处理头像URL
+        const avatarUrl = res.data.url;
+        const fullAvatarUrl = getAvatarUrl(avatarUrl);
+        
+        console.log('最终使用的头像URL:', fullAvatarUrl);
+        profileForm.avatar = avatarUrl; // 保存相对路径到表单
+        ElMessage.success('头像上传成功');
         
         // 更新本地存储的用户信息
-        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-        userInfo.avatar = profileForm.avatar
-        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        userInfo.avatar = avatarUrl;
+        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        
+        // 添加时间戳参数，防止浏览器缓存
+        const img = document.querySelector('.avatar');
+        if (img) {
+          img.src = fullAvatarUrl + '?t=' + new Date().getTime();
+        }
       } else {
         ElMessage.warning('服务器返回的头像URL为空')
       }

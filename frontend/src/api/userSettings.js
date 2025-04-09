@@ -27,14 +27,29 @@ export function updateUserProfile(data) {
  * @param {FormData} formData 包含file字段的表单数据
  */
 export function uploadUserAvatar(formData) {
+  console.log('调用上传头像API，传入的formData:', formData);
+  // 确保formData包含file字段
+  if (formData && formData.has && !formData.has('file')) {
+    console.error('formData中缺少file字段');
+  }
+  
   return request({
     url: '/user/settings/avatar',
     method: 'post',
     data: formData,
     headers: {
       'Content-Type': 'multipart/form-data'
+    },
+    // 显式指定超时时间，文件上传可能需要更长时间
+    timeout: 30000,
+    // 添加进度监控
+    onUploadProgress: (progressEvent) => {
+      const percentCompleted = Math.round(
+        (progressEvent.loaded * 100) / progressEvent.total
+      );
+      console.log('上传进度:', percentCompleted + '%');
     }
-  })
+  });
 }
 
 /**

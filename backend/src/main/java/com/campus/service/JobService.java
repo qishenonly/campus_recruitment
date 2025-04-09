@@ -186,4 +186,34 @@ public class JobService {
         application.setUpdateTime(LocalDateTime.now());
         jobApplicationRepository.save(application);
     }
+
+    /**
+     * 获取指定企业的职位数量
+     * @param companyId 企业ID
+     * @return 职位数量
+     */
+    public long countByCompanyId(Long companyId) {
+        return jobRepository.countByCompanyId(companyId);
+    }
+
+    /**
+     * 获取指定企业收到的简历数量
+     * @param companyId 企业ID
+     * @return 简历数量
+     */
+    public long countApplicationsByCompanyId(Long companyId) {
+        return jobApplicationRepository.countByJobCompanyId(companyId);
+    }
+
+    /**
+     * 获取指定企业的面试数量
+     * @param companyId 企业ID
+     * @param status 面试状态
+     * @return 面试数量
+     */
+    public long countInterviewsByCompanyIdAndStatus(Long companyId, String status) {
+        // 此处需要实际的Interview数据模型和Repository
+        // 暂时返回0，需要根据实际项目情况实现
+        return 0;
+    }
 } 

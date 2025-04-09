@@ -115,8 +115,12 @@ public class UserSettingsServiceImpl implements UserSettingsService {
         Path filePath = Paths.get(avatarDir, fileName);
         Files.copy(file.getInputStream(), filePath);
         
-        // 构建访问URL
-        String avatarUrl = accessPath + "/user/avatar/" + fileName;
+        // 构建访问URL - 直接使用我们在StaticResourceConfig中配置的路径
+        // 使用固定格式的绝对路径，确保前端可以直接访问
+        String avatarUrl = "/api/files/resumes/user/avatar/" + fileName;
+        
+        log.info("文件实际存储路径: {}", filePath.toAbsolutePath());
+        log.info("生成的访问URL: {}", avatarUrl);
         
         // 更新用户头像
         user.setAvatar(avatarUrl);

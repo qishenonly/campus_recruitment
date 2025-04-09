@@ -63,6 +63,14 @@ export function deleteTeamMember(id) {
   })
 }
 
+// 获取企业统计信息
+export function getCompanyDashboard() {
+  return request({
+    url: '/company/employee/dashboard',
+    method: 'get'
+  })
+}
+
 export default {
   getCompanyInfo,
   updateCompanyInfo,
@@ -70,5 +78,6 @@ export default {
   getTeamMembers,
   addTeamMember,
   updateTeamMember,
-  deleteTeamMember
+  deleteTeamMember,
+  getCompanyDashboard
 } 

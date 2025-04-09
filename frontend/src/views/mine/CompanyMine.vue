@@ -3,7 +3,7 @@
     <!-- 顶部个人信息卡片 -->
     <div class="profile-card">
       <div class="avatar-section">
-        <img :src="companyLogo || '/default-company.png'" class="company-logo" />
+        <img :src="companyLogo" class="company-logo" />
         <div class="company-info">
           <h3>{{ companyName }}</h3>
           <p class="role">{{ userRole === 'HR' ? '人力资源' : '招聘管理员' }}</p>
@@ -75,17 +75,84 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showDialog } from 'vant'
+import { getCompanyInfo, getCompanyDashboard } from '@/api/company'
 
 const router = useRouter()
 
-
-// 模拟数据，实际应从API获取
-const companyName = ref('青云科技有限公司')
+// 公司信息
+const companyName = ref('正在加载...')
 const companyLogo = ref('')
-const userRole = ref('HR')
-const jobPostings = ref(12)
-const totalApplications = ref(156)
-const interviewCount = ref(8)
+const userRole = ref('')
+
+// 统计数据
+const jobPostings = ref(0)
+const totalApplications = ref(0)
+const interviewCount = ref(0)
+
+// 处理头像URL
+const getAvatarUrl = (url) => {
+  if (!url) return '/default-company.png';
+  
+  // 确保URL中包含/api前缀
+  if (!url.startsWith('/api') && !url.startsWith('http')) {
+    if (url.startsWith('/')) {
+      url = '/api' + url;
+    } else {
+      url = '/api/' + url;
+    }
+  }
+  
+  // 如果URL以/api开头但不是完整URL，添加基础路径
+  if (url.startsWith('/api') && !url.startsWith('http')) {
+    const baseURL = import.meta.env.VITE_API_URL || '';
+    // 如果基础URL已经包含/api，避免重复
+    if (baseURL && baseURL.endsWith('/api')) {
+      url = baseURL + url.substring(4); // 移除/api
+    } else if (baseURL) {
+      // 确保baseURL和url之间没有重复的斜杠
+      if (baseURL.endsWith('/') && url.startsWith('/')) {
+        url = baseURL + url.substring(1);
+      } else if (!baseURL.endsWith('/') && !url.startsWith('/')) {
+        url = baseURL + '/' + url;
+      } else {
+        url = baseURL + url;
+      }
+    }
+  }
+  
+  return url;
+}
+
+// 加载企业信息
+const loadCompanyInfo = async () => {
+  try {
+    const response = await getCompanyInfo()
+    if (response.code === 200 && response.data) {
+      companyName.value = response.data.name || '未知企业'
+      companyLogo.value = response.data.logo ? getAvatarUrl(response.data.logo) : '/default-company.png'
+      
+      // 从localStorage获取用户信息
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      userRole.value = userInfo.position || 'HR'
+    }
+  } catch (error) {
+    console.error('获取企业信息失败:', error)
+  }
+}
+
+// 加载统计数据
+const loadDashboardData = async () => {
+  try {
+    const response = await getCompanyDashboard()
+    if (response.code === 200 && response.data) {
+      jobPostings.value = response.data.jobPostings || 0
+      totalApplications.value = response.data.totalApplications || 0
+      interviewCount.value = response.data.interviewCount || 0
+    }
+  } catch (error) {
+    console.error('获取统计数据失败:', error)
+  }
+}
 
 const handleLogout = () => {
   showDialog({
@@ -100,7 +167,18 @@ const handleLogout = () => {
 }
 
 onMounted(() => {
-  // 获取公司和用户信息
+  loadCompanyInfo()
+  loadDashboardData()
+  
+  // 设置定时刷新，每分钟更新一次数据
+  const timer = setInterval(() => {
+    loadDashboardData()
+  }, 60000)
+  
+  // 组件卸载时清除定时器
+  return () => {
+    clearInterval(timer)
+  }
 })
 </script>
 

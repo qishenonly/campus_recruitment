@@ -5,7 +5,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@Configuration
+/**
+ * 此配置类暂时禁用，改用StaticResourceConfig替代
+ * 如果功能恢复正常可以考虑完全删除此类
+ */
+//@Configuration
 public class WebConfig implements WebMvcConfigurer {
 
     @Value("${file.upload-dir}")
