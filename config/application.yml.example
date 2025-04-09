@@ -1,0 +1,36 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    # 替换为您的实际数据库配置
+    url: jdbc:mysql://localhost:3306/campus_recruitment?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: your_database_username
+    password: your_database_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# 文件上传配置
+file:
+  upload-dir: /app/uploads/resumes
+  access-path: /files/resumes    # 文件访问路径 
+
+# 如果使用MinIO，请配置以下选项
+# minio:
+#   endpoint: http://your-minio-server:9000
+#   accessKey: your-access-key
+#   secretKey: your-secret-key
+#   bucket:
+#     name: resumes 

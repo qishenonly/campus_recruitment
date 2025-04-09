@@ -6,7 +6,7 @@
       <div class="profile-card">
         <div class="profile-info">
           <div class="avatar-wrapper">
-            <img :src="userProfile?.avatar || 'http'" alt="头像" class="avatar" />
+            <img :src="getAvatarUrl(userProfile?.avatar) || 'http'" alt="头像" class="avatar" />
             <div class="online-status"></div>
           </div>
           <div class="user-info">
@@ -220,6 +220,12 @@ const getUserInfos = async () => {
   } catch (error) {
     console.error('获取用户信息失败:', error)
   }
+}
+
+// getAvatarUrl
+const getAvatarUrl = (url) => {
+  if (!url) return '';
+  return import.meta.env.VITE_API_BASE_URL + url;
 }
 
 onMounted(async () => {

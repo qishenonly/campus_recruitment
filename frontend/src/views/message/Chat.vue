@@ -7,7 +7,7 @@
             <i class="el-icon-arrow-left"></i>
           </div>
           <div class="avatar">
-            <img :src="getOtherUserAvatar()" alt="头像" />
+            <img :src="aboutAvatarUrl" alt="头像" />
           </div>
           <div class="header-info">
             <div class="chat-name">
@@ -48,7 +48,7 @@
           <div :class="['message-item', isSelfMessage(message) ? 'message-self' : 'message-other']">
             <!-- 对方头像 (左侧) -->
             <div class="avatar" v-if="!isSelfMessage(message)">
-              <img :src="getOtherUserAvatar()" alt="头像" />
+              <img :src="aboutAvatarUrl" alt="头像" />
             </div>
             
             <div class="message-content">
@@ -87,7 +87,7 @@
             
             <!-- 自己的头像 (右侧) -->
             <div class="avatar self-avatar" v-if="isSelfMessage(message)">
-              <img :src="getSelfAvatar()" alt="头像" />
+              <img :src="selfAvatarUrl" alt="头像" />
             </div>
           </div>
         </div>
@@ -265,6 +265,8 @@
   const studentInfo = ref({}) // 添加学生信息对象
   const isGroupChat = ref(false)
   const showQuickPhrases = ref(false)
+  const aboutAvatarUrl = ref('')
+  const selfAvatarUrl = ref('')
   const jobInfo = ref({
     title: route.query.jobTitle || '',
     id: route.query.jobId || ''
@@ -322,6 +324,7 @@
     if (userRole.value === 'COMPANY' && studentInfo.value.avatar) {
       return getAvatarUrl(studentInfo.value.avatar);
     }
+    console.log("获取到的头像： ", chatInfo.value.avatar);
     return getAvatarUrl(chatInfo.value.avatar) || '/images/default-avatar.png'
   }
   
@@ -415,6 +418,14 @@
         // } catch (error) {
         //   console.error('标记消息已读失败:', error);
         // }
+
+        if (messages.value.find(m => m.senderRole === 'COMPANY')) {
+          aboutAvatarUrl.value = getAvatarUrl(messages.value.find(m => m.senderRole === 'COMPANY').senderAvatar)
+        } 
+        
+        if (messages.value.find(m => m.senderRole === 'STUDENT')) {
+          selfAvatarUrl.value = getAvatarUrl(messages.value.find(m => m.senderRole === 'STUDENT').senderAvatar)
+        }
         
         // 获取第一条消息，查找是否包含职位信息
         if (messages.value.length > 0) {

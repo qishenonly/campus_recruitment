@@ -55,7 +55,7 @@
         @click="goToCompanyDetail(company.id)"
       >
         <div class="company-logo">
-          <img :src="company.logo" :alt="company.name">
+          <img :src="getLogoUrl(company.logo)" :alt="company.name">
         </div>
         <div class="company-info">
           <h3 class="company-name">{{ company.companyName }}</h3>
@@ -184,6 +184,10 @@ const fetchCompanies = async () => {
 // 跳转到公司详情
 const goToCompanyDetail = (id) => {
   router.push(`/company/${id}`)
+}
+
+const getLogoUrl = (logo) => {
+  return import.meta.env.VITE_API_BASE_URL + logo
 }
 
 onMounted(() => {
