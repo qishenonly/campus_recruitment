@@ -17,6 +17,15 @@ export function updateCompanyInfo(data) {
   })
 }
 
+// 创建企业信息（首次完善信息使用）
+export function createCompanyInfo(data) {
+  return request({
+    url: '/company/create',
+    method: 'post',
+    data
+  })
+}
+
 // 上传企业Logo
 export function uploadCompanyLogo(data) {
   return request({
@@ -74,6 +83,7 @@ export function getCompanyDashboard() {
 export default {
   getCompanyInfo,
   updateCompanyInfo,
+  createCompanyInfo,
   uploadCompanyLogo,
   getTeamMembers,
   addTeamMember,

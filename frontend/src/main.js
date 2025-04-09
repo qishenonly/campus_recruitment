@@ -12,7 +12,9 @@ import {
   Icon,
   Toast,
   PullRefresh,
-  List
+  List,
+  Radio,
+  RadioGroup
 } from 'vant'
 import 'vant/lib/index.css'
 import 'amfe-flexible'
@@ -49,6 +51,8 @@ app.use(Icon)
 app.use(Toast)
 app.use(PullRefresh)
 app.use(List)
+app.use(Radio)
+app.use(RadioGroup)
 app.use(ElementPlus, {
   locale: zhCn,
 })

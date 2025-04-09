@@ -3,8 +3,10 @@ package com.campus.service.impl;
 import com.campus.dto.CompanyInfoDTO;
 import com.campus.model.Company;
 import com.campus.model.TeamMember;
+import com.campus.model.User;
 import com.campus.repository.CompanyRepository;
 import com.campus.repository.TeamMemberRepository;
+import com.campus.repository.UserRepository;
 import com.campus.service.CompanyInfoService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +23,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
+import java.time.LocalDateTime;
+import javax.transaction.Transactional;
 
 @Slf4j
 @Service
@@ -29,6 +33,7 @@ public class CompanyInfoServiceImpl implements CompanyInfoService {
 
     private final CompanyRepository companyRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final UserRepository userRepository;
     
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -143,6 +148,70 @@ public class CompanyInfoServiceImpl implements CompanyInfoService {
         
         log.info("企业Logo上传成功，URL: {}", logoUrl);
         return logoUrl;
+    }
+    
+    @Override
+    @Transactional
+    public CompanyInfoDTO createCompanyInfo(Long userId, CompanyInfoDTO companyInfoDTO) {
+        log.info("创建企业信息: userId={}, companyInfo={}", userId, companyInfoDTO);
+        
+        // 1. 创建新的公司对象
+        Company company = new Company();
+        company.setCompanyName(companyInfoDTO.getName());
+        company.setIndustry(companyInfoDTO.getIndustry());
+        company.setScale(companyInfoDTO.getSize());
+        company.setDescription(companyInfoDTO.getDescription());
+        company.setWebsite(companyInfoDTO.getWebsite());
+        
+        // 如果city是列表，转换为字符串
+        if (companyInfoDTO.getCity() != null && !companyInfoDTO.getCity().isEmpty()) {
+            company.setCity(companyInfoDTO.getCity().get(0)); // 简化处理，只取第一级城市
+        }
+        
+        company.setAddress(companyInfoDTO.getAddress());
+        company.setContactPerson(companyInfoDTO.getContactPerson());
+        company.setContactPosition(companyInfoDTO.getContactPosition());
+        company.setVerified(false); // 默认未认证
+        company.setCreateTime(LocalDateTime.now());
+        company.setUpdateTime(LocalDateTime.now());
+        
+        // 2. 保存公司信息
+        Company savedCompany = companyRepository.save(company);
+        log.info("企业信息保存成功: companyId={}", savedCompany.getId());
+        
+        // 3. 创建团队成员关联（当前用户作为管理员）
+        TeamMember teamMember = new TeamMember();
+        // 直接设置公司对象，而不是ID
+        teamMember.setCompany(savedCompany);
+        
+        // 从UserRepository获取User对象
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("用户不存在: id=" + userId));
+        teamMember.setUser(user);
+        
+        teamMember.setName(companyInfoDTO.getContactPerson());
+        teamMember.setPosition(companyInfoDTO.getContactPosition());
+        teamMember.setRole("admin"); // 设置为管理员角色
+        teamMember.setCreateTime(LocalDateTime.now());
+        teamMember.setUpdateTime(LocalDateTime.now());
+        
+        // 如果有提供电子邮件和电话，则设置
+        if (companyInfoDTO.getEmail() != null) {
+            teamMember.setEmail(companyInfoDTO.getEmail());
+        } else {
+            // email是必填的，如果没有提供，则使用关联用户的email
+            teamMember.setEmail(user.getEmail());
+        }
+        
+        if (companyInfoDTO.getPhone() != null) {
+            teamMember.setPhone(companyInfoDTO.getPhone());
+        }
+        
+        TeamMember savedTeamMember = teamMemberRepository.save(teamMember);
+        log.info("团队成员关联创建成功: memberId={}", savedTeamMember.getId());
+        
+        // 返回创建的企业信息
+        return convertToDTO(savedCompany);
     }
     
     /**

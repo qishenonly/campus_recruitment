@@ -17,17 +17,43 @@
         
         <!-- 企业Logo上传 -->
         <el-form-item label="企业LOGO">
-          <el-upload
-            class="avatar-uploader"
-            :action="uploadUrl"
-            :headers="headers"
-            :show-file-list="false"
-            :on-success="handleLogoSuccess"
-            :before-upload="beforeLogoUpload"
-            :disabled="!editing">
-            <img v-if="companyForm.logo" :src="companyForm.logo" class="avatar" />
-            <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-          </el-upload>
+          <div class="logo-upload-container">
+            <el-upload
+              class="avatar-uploader"
+              :action="uploadUrl"
+              :headers="headers"
+              :show-file-list="false"
+              :on-success="handleLogoSuccess"
+              :before-upload="beforeLogoUpload"
+              :on-error="handleLogoError"
+              :disabled="!editing">
+              <img 
+                v-if="companyForm.logo" 
+                :src="getAvatarUrl(companyForm.logo)" 
+                class="avatar" 
+              />
+              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+            
+            <!-- 添加备用上传按钮 -->
+            <div v-if="editing" class="backup-upload">
+              <input
+                type="file"
+                ref="logoFileInput"
+                style="display: none"
+                accept="image/jpeg,image/png"
+                @change="handleManualFileChange"
+              />
+              <el-button 
+                size="small" 
+                type="primary" 
+                @click="triggerFileSelect"
+                :icon="Upload"
+              >
+                备用上传
+              </el-button>
+            </div>
+          </div>
           <div class="upload-tip">推荐尺寸: 300px × 300px，支持jpg、png格式</div>
         </el-form-item>
         
@@ -109,7 +135,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Upload } from '@element-plus/icons-vue'
 import { getCompanyInfo, updateCompanyInfo, uploadCompanyLogo } from '@/api/companyInfo'
 
 // 城市数据
@@ -182,6 +208,9 @@ const headers = {
   Authorization: `Bearer ${localStorage.getItem('token')}`
 }
 
+// 文件输入引用
+const logoFileInput = ref(null)
+
 // 获取企业信息
 const fetchCompanyInfo = async () => {
   try {
@@ -204,6 +233,11 @@ const fetchCompanyInfo = async () => {
     console.error('获取企业信息失败:', error)
     ElMessage.error('获取企业信息失败')
   }
+}
+
+// getAvatarUrl
+const getAvatarUrl = (url) => {
+  return import.meta.env.VITE_API_BASE_URL + url;
 }
 
 // 处理编辑/保存操作
@@ -238,28 +272,162 @@ const handleEdit = async () => {
 
 // 图片上传前的验证
 const beforeLogoUpload = (file) => {
+  console.log('准备上传的文件:', file)
+  console.log('文件类型:', file.type)
+  console.log('文件大小:', file.size / 1024 / 1024, 'MB')
+  
   const isJPG = file.type === 'image/jpeg'
   const isPNG = file.type === 'image/png'
   const isLt2M = file.size / 1024 / 1024 < 2
 
   if (!isJPG && !isPNG) {
-    ElMessage.error('上传头像图片只能是 JPG 或 PNG 格式!')
+    ElMessage.error('上传LOGO图片只能是 JPG 或 PNG 格式!')
     return false
   }
   if (!isLt2M) {
-    ElMessage.error('上传头像图片大小不能超过 2MB!')
+    ElMessage.error('上传LOGO图片大小不能超过 2MB!')
     return false
   }
+  
+  // 检查文件名是否有中文（有些服务器可能会有问题）
+  if (/[\u4e00-\u9fa5]/.test(file.name)) {
+    // 不直接阻止上传，但给出警告
+    console.warn('文件名包含中文，可能在某些服务器上出现问题')
+    ElMessage.warning('文件名包含中文，建议使用英文命名')
+  }
+  
+  console.log('文件校验通过，准备上传')
   return true
 }
 
 // 图片上传成功的回调
 const handleLogoSuccess = (res, file) => {
-  if (res.code === 200) {
-    companyForm.value.logo = res.data.url
+  if (res.code === 200 && res.data && res.data.url) {
+    console.log('LOGO上传成功，返回数据:', res.data)
+    
+    // 获取正确的URL路径
+    let logoUrl = res.data.url
+    
+    // 确保URL中包含/api前缀
+    if (!logoUrl.startsWith('/api') && !logoUrl.startsWith('http')) {
+      if (logoUrl.startsWith('/')) {
+        logoUrl = '/api' + logoUrl
+      } else {
+        logoUrl = '/api/' + logoUrl
+      }
+    }
+    
+    // 如果URL以/api开头但不是完整URL，添加基础路径
+    if (logoUrl.startsWith('/api') && !logoUrl.startsWith('http')) {
+      const baseURL = import.meta.env.VITE_API_URL || ''
+      // 如果基础URL已经包含/api，避免重复
+      if (baseURL && baseURL.endsWith('/api')) {
+        logoUrl = baseURL + logoUrl.substring(4) // 移除/api
+      } else if (baseURL) {
+        // 确保baseURL和logoUrl之间没有重复的斜杠
+        if (baseURL.endsWith('/') && logoUrl.startsWith('/')) {
+          logoUrl = baseURL + logoUrl.substring(1)
+        } else if (!baseURL.endsWith('/') && !logoUrl.startsWith('/')) {
+          logoUrl = baseURL + '/' + logoUrl
+        } else {
+          logoUrl = baseURL + logoUrl
+        }
+      }
+    }
+    
+    console.log('最终使用的LOGO URL:', logoUrl)
+    
+    // 添加时间戳参数，防止浏览器缓存
+    companyForm.value.logo = logoUrl + '?t=' + new Date().getTime()
+    
     ElMessage.success('LOGO上传成功')
   } else {
+    console.error('LOGO上传失败，返回数据:', res)
     ElMessage.error(res.message || 'LOGO上传失败')
+  }
+}
+
+// 图片上传错误的回调
+const handleLogoError = (error) => {
+  console.error('LOGO上传错误:', error)
+  ElMessage.error('LOGO上传错误，请检查网络连接')
+}
+
+// 图片加载错误的回调
+const handleLogoLoadError = (e) => {
+  console.error('LOGO加载错误')
+  // 记录当前URL
+  const currentUrl = e.target.src
+  console.log('加载失败的URL:', currentUrl)
+  
+  // 显示默认图像
+  e.target.src = '/default-logo.png'
+  // 不再显示错误提示，避免用户体验不佳
+}
+
+// 手动上传LOGO的方法（作为备用方案）
+const manualUploadLogo = async (file) => {
+  try {
+    if (!beforeLogoUpload(file)) {
+      return Promise.reject(new Error('文件校验未通过'))
+    }
+
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 显示上传中提示
+    const loadingInstance = ElMessage({
+      message: 'LOGO上传中...',
+      type: 'info',
+      duration: 0
+    })
+
+    try {
+      // 调用上传API
+      const res = await uploadCompanyLogo(formData)
+      
+      // 关闭提示
+      loadingInstance.close()
+      
+      // 处理响应
+      if (res.code === 200 && res.data) {
+        // 使用与handleLogoSuccess相同的逻辑处理
+        handleLogoSuccess(res)
+        return Promise.resolve(res)
+      } else {
+        ElMessage.error(res.message || 'LOGO上传失败')
+        return Promise.reject(new Error(res.message || 'LOGO上传失败'))
+      }
+    } catch (error) {
+      // 关闭提示
+      loadingInstance.close()
+      
+      console.error('LOGO上传出错:', error)
+      ElMessage.error('LOGO上传失败: ' + (error.message || '未知错误'))
+      return Promise.reject(error)
+    }
+  } catch (error) {
+    console.error('LOGO上传准备失败:', error)
+    return Promise.reject(error)
+  }
+}
+
+// 触发文件选择的方法
+const triggerFileSelect = () => {
+  logoFileInput.value.click()
+}
+
+// 处理手动文件选择变更的方法
+const handleManualFileChange = (event) => {
+  const file = event.target.files[0]
+  if (file) {
+    console.log('手动选择文件:', file)
+    manualUploadLogo(file).catch(error => {
+      console.error('手动上传LOGO失败:', error)
+    }).finally(() => {
+      // 重置文件输入，确保同一文件可以再次选择
+      event.target.value = ''
+    })
   }
 }
 
@@ -317,5 +485,36 @@ onMounted(() => {
   color: #606266;
   font-size: 12px;
   margin-top: 8px;
+}
+
+.logo-upload-container {
+  position: relative;
+  display: inline-block;
+}
+
+.backup-upload {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 178px;
+  height: 178px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.backup-upload:hover {
+  opacity: 1;
+}
+
+.backup-upload input {
+  display: none;
+}
+
+.backup-upload button {
+  margin: 0;
 }
 </style> 

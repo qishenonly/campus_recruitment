@@ -236,7 +236,7 @@
     
     // 如果URL以/api开头但不是完整URL，添加基础路径
     if (url.startsWith('/api') && !url.startsWith('http')) {
-      const baseURL = import.meta.env.VITE_API_URL || '';
+      const baseURL = import.meta.env.VITE_API_BASE_URL || '';
       // 如果基础URL已经包含/api，避免重复
       if (baseURL && baseURL.endsWith('/api')) {
         url = baseURL + url.substring(4); // 移除/api

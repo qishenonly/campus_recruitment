@@ -22,7 +22,6 @@
                   :src="getAvatarUrl(profileForm.avatar)" 
                   class="avatar" 
                   alt="用户头像" 
-                  @error="handleAvatarError"
                 />
                 <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
               </el-upload>
@@ -262,7 +261,7 @@ import {
 } from '@/api/userSettings'
 
 // 获取基础 API URL
-const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
 // 当前激活的标签页
 const activeTab = ref('profile')

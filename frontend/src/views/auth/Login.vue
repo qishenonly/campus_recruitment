@@ -91,6 +91,12 @@
       v-model="showCompleteInfo"
       @complete="handleInfoComplete"
     />
+
+    <!-- 完善企业信息弹窗 -->
+    <complete-company-info-dialog
+      v-model="showCompleteCompanyInfo"
+      @complete="handleCompanyInfoComplete"
+    />
   </div>
 </template>
 
@@ -100,14 +106,17 @@ import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { login } from '@/api/auth'
 import { getUserProfile } from '@/api/user'
+import { getCompanyInfo } from '@/api/company'
 import { useDialogStore } from '@/stores/dialog'
 import CompleteInfoDialog from './components/CompleteInfoDialog.vue'
+import CompleteCompanyInfoDialog from './components/CompleteCompanyInfoDialog.vue'
 
 const router = useRouter()
 const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 
 const loading = ref(false)
 const showCompleteInfo = ref(false)
+const showCompleteCompanyInfo = ref(false)
 const dialogStore = useDialogStore()
 
 const formData = reactive({
@@ -135,7 +144,7 @@ const onSubmit = async () => {
     // 先跳转到首页
     await router.push('/home')
 
-    // 如果是学生用户,检查是否需要完善信息
+    // 根据用户角色检查是否需要完善信息
     if (res.data.role === 'STUDENT') {
       try {
         const profileRes = await getUserProfile()
@@ -152,6 +161,32 @@ const onSubmit = async () => {
           dialogStore.showCompleteInfoDialog()
         }, 300)
       }
+    } else if (res.data.role === 'COMPANY') {
+      try {
+        // 检查企业信息是否存在
+        const companyRes = await getCompanyInfo()
+        
+        // 如果获取不到企业信息，显示完善企业信息弹窗
+        if (!companyRes.data) {
+          setTimeout(() => {
+            dialogStore.showCompleteCompanyInfoDialog()
+          }, 300)
+        }
+      } catch (error) {
+        console.error('获取企业信息失败:', error)
+        // 判断错误是否为企业不存在的情况
+        if (
+          (error.response && error.response.status === 404) || 
+          (error.response && error.response.data && 
+           (error.response.data.message.includes('找不到该用户关联的企业信息') || 
+            error.response.data.message.includes('企业信息不存在')))
+        ) {
+          // 显示完善企业信息弹窗
+          setTimeout(() => {
+            dialogStore.showCompleteCompanyInfoDialog()
+          }, 300)
+        }
+      }
     }
   } catch (error) {
     console.error('登录失败:', error)
@@ -166,6 +201,10 @@ const onSubmit = async () => {
 
 const handleInfoComplete = () => {
   showCompleteInfo.value = false
+}
+
+const handleCompanyInfoComplete = () => {
+  showCompleteCompanyInfo.value = false
 }
 
 const handleSocialLogin = (type) => {

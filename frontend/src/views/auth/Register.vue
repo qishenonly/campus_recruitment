@@ -97,6 +97,20 @@
               </template>
             </van-field>
 
+            <van-field
+              name="role"
+              label="注册角色"
+            >
+              <template #input>
+                <div class="role-selector">
+                  <van-radio-group v-model="formData.role" direction="horizontal">
+                    <van-radio name="STUDENT">学生</van-radio>
+                    <van-radio name="COMPANY">企业员工</van-radio>
+                  </van-radio-group>
+                </div>
+              </template>
+            </van-field>
+
             <div class="agreement-checkbox">
               <van-checkbox v-model="formData.agreement" shape="square" icon-size="14px">
                 <span class="agreement-text">
@@ -608,5 +622,25 @@ onUnmounted(() => {
 .send-code-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.privacy-content a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+/* 角色选择器样式 */
+.role-selector {
+  display: flex;
+  justify-content: flex-start;
+  padding: 8px 0;
+}
+
+.role-selector .van-radio {
+  margin-right: 20px;
+}
+
+.role-selector .van-radio__label {
+  color: #333;
 }
 </style> 

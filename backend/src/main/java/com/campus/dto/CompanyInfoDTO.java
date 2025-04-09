@@ -17,4 +17,6 @@ public class CompanyInfoDTO {
     private String address; // 详细地址
     private String contactPerson; // 联系人
     private String contactPosition; // 联系人职位
+    private String email; // 联系邮箱
+    private String phone; // 联系电话
 } 

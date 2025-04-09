@@ -118,4 +118,57 @@ public class CompanyInfoController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
+    
+    /**
+     * 创建企业信息
+     */
+    @PostMapping("/create")
+    public ResponseEntity<?> createCompanyInfo(
+            @RequestHeader("Authorization") String token,
+            @RequestBody Map<String, Object> companyData) {
+        try {
+            // 从JWT中获取用户ID
+            String jwtToken = token.replace("Bearer ", "");
+            Long userId = JwtUtil.getUserIdFromToken(jwtToken);
+            
+            log.info("创建企业信息，用户ID={}, 数据={}", userId, companyData);
+            
+            // 构建企业DTO对象
+            CompanyInfoDTO companyInfoDTO = new CompanyInfoDTO();
+            companyInfoDTO.setName((String) companyData.get("companyName"));
+            companyInfoDTO.setIndustry((String) companyData.get("industry"));
+            companyInfoDTO.setSize((String) companyData.get("scale"));
+            companyInfoDTO.setDescription((String) companyData.get("description"));
+            companyInfoDTO.setWebsite((String) companyData.get("website"));
+            
+            // 处理地址相关信息
+            if (companyData.get("location") != null) {
+                companyInfoDTO.setAddress((String) companyData.get("location"));
+            }
+            
+            // 添加联系人信息
+            companyInfoDTO.setContactPerson((String) companyData.get("memberName"));
+            companyInfoDTO.setContactPosition((String) companyData.get("position"));
+            companyInfoDTO.setEmail((String) companyData.get("memberEmail"));
+            companyInfoDTO.setPhone((String) companyData.get("memberPhone"));
+            
+            // 调用服务创建企业信息
+            CompanyInfoDTO createdCompany = companyInfoService.createCompanyInfo(userId, companyInfoDTO);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("message", "企业信息创建成功");
+            response.put("data", createdCompany);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("创建企业信息失败", e);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("message", "创建企业信息失败: " + e.getMessage());
+            
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
 }

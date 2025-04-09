@@ -57,6 +57,11 @@ public class FileUploadConfig implements WebMvcConfigurer {
         registry.addResourceHandler(accessPath + "/**")
                 .addResourceLocations("file:" + uploadDir + "/");
         
+        // 添加额外的资源处理器，使文件也可以通过/api前缀访问
+        registry.addResourceHandler("/api" + accessPath + "/**")
+                .addResourceLocations("file:" + uploadDir + "/");
+        
         log.info("已添加资源处理器: {} -> {}", accessPath, uploadDir);
+        log.info("已添加API资源处理器: /api{} -> {}", accessPath, uploadDir);
     }
 } 

@@ -30,4 +30,12 @@ public interface CompanyInfoService {
      * @throws IOException 文件处理异常
      */
     String uploadCompanyLogo(Long companyId, MultipartFile file) throws IOException;
+    
+    /**
+     * 创建企业信息
+     * @param userId 用户ID
+     * @param companyInfoDTO 企业信息DTO
+     * @return 创建后的企业信息
+     */
+    CompanyInfoDTO createCompanyInfo(Long userId, CompanyInfoDTO companyInfoDTO);
 } 
