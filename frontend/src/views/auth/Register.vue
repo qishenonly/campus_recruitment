@@ -45,7 +45,8 @@
                   size="small"
                   type="primary"
                   class="send-code-btn"
-                  :disabled="countdown > 0"
+                  :disabled="countdown > 0 || sendingCode"
+                  :loading="sendingCode"
                   @click="sendCode"
                 >
                   {{ countdown > 0 ? `${countdown}秒后重试` : '获取验证码' }}
@@ -227,13 +228,14 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const showAgreementDialog = ref(false)
 const showPrivacyDialog = ref(false)
+const sendingCode = ref(false)
 
 const validateConfirmPassword = (value) => {
   return value === formData.password
 }
 
 const sendCode = async () => {
-  if (countdown.value > 0) return
+  if (countdown.value > 0 || sendingCode.value) return
   
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!formData.email) {
@@ -246,6 +248,7 @@ const sendCode = async () => {
   }
 
   try {
+    sendingCode.value = true
     await sendVerificationCode(formData.email)
     showToast({
       message: '验证码已发送',
@@ -262,6 +265,12 @@ const sendCode = async () => {
     }, 1000)
   } catch (error) {
     console.error('发送验证码失败:', error)
+    showToast({
+      message: '发送验证码失败，请稍后再试',
+      type: 'fail'
+    })
+  } finally {
+    sendingCode.value = false
   }
 }
 

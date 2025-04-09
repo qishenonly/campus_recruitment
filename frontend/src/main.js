@@ -9,7 +9,10 @@ import {
   CellGroup, 
   Checkbox,
   Dialog,
-  Icon
+  Icon,
+  Toast,
+  PullRefresh,
+  List
 } from 'vant'
 import 'vant/lib/index.css'
 import 'amfe-flexible'
@@ -43,6 +46,9 @@ app.use(CellGroup)
 app.use(Checkbox)
 app.use(Dialog)
 app.use(Icon)
+app.use(Toast)
+app.use(PullRefresh)
+app.use(List)
 app.use(ElementPlus, {
   locale: zhCn,
 })
